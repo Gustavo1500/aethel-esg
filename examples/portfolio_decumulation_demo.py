@@ -21,9 +21,9 @@ def run_comprehensive_decumulation_demo():
         initial_ipca=0.045      # Starting annual inflation at 4.5%
     )
 
-    print(f"Configuring ESG projection: {config.duration_years} years ({config.steps} months)")
+    print(f"Configuring projection: {config.duration_years} years ({config.steps} months)")
     print(f"Generating paths for {config.num_scenarios:,} scenarios...")
-    
+
     simulator = MarketSimulator(config)
     raw_scenarios = simulator.run()
     results = SimulationResults(raw_scenarios)
@@ -35,11 +35,9 @@ def run_comprehensive_decumulation_demo():
     initial_monthly_withdrawal = 4_000.0
 
     # 3. Define a Vectorized Custom Spending Policy (Case 4)
-    # If the portfolio balance falls below $350k, we scale spending back by 20% to prevent ruin.
     def variable_spending_guardrail(balance, cpi_factor, step, deposit_rate):
         base_w = initial_monthly_withdrawal * cpi_factor
         is_depleted = balance < 350_000.0
-        # Returns a vectorized array of withdrawals matching the current state of each scenario
         return np.where(is_depleted, base_w * 0.80, base_w)
 
     print("\n[Simulation] Evaluating 4 Comparative Decumulation Strategies...")
@@ -118,16 +116,18 @@ def run_comprehensive_decumulation_demo():
     print("[Dashboard] Building multi-path interactive comparison charts...")
     years = np.arange(config.steps + 1) / 12
 
+    # Increased horizontal_spacing to 0.14 to resolve y-axis overlaps
     fig = make_subplots(
         rows=1, cols=2,
         subplot_titles=(
             "Nest Egg Survival/Solvency Probability over Horizon",
             "Median Real Nest Egg Depletion Paths (P50)"
         ),
-        horizontal_spacing=0.10
+        horizontal_spacing=0.14
     )
 
-    colors = ["#1f77b4", "#d62728", "#ff7f0e", "#2ca02c"]
+    # Elegant Slate-Crimson-Blue-Teal consulting palette
+    colors = ["#64748B", "#EF4444", "#3B82F6", "#0D9488"]
 
     for idx, (name, data) in enumerate(cases):
         short_name = name.split(" (")[0]
@@ -161,21 +161,43 @@ def run_comprehensive_decumulation_demo():
             row=1, col=2
         )
 
-    # Style Dashboard Layout
+    # Apply soft Slate gridlines and remove explicit zerolines (preventing origin overlap)
+    for col_idx in [1, 2]:
+        x_axis = f"xaxis{col_idx if col_idx > 1 else ''}"
+        y_axis = f"yaxis{col_idx if col_idx > 1 else ''}"
+        fig.layout[x_axis].update(gridcolor="#F1F5F9", showgrid=True, linecolor="#E2E8F0", zeroline=False)
+        fig.layout[y_axis].update(gridcolor="#F1F5F9", showgrid=True, linecolor="#E2E8F0", zeroline=False)
+
+    # Style axes and titles
     fig.update_xaxes(title_text="Horizon (Years)", row=1, col=1)
     fig.update_yaxes(title_text="Solvency Success Rate (%)", ticksuffix="%", range=[0, 105], row=1, col=1)
 
     fig.update_xaxes(title_text="Horizon (Years)", row=1, col=2)
     fig.update_yaxes(title_text="Portfolio Value ($)", tickprefix="$", row=1, col=2)
 
+    # Soft reference line at 80% solvency target
+    fig.add_hline(y=80, line_dash="dash", line_color="#CBD5E1", line_width=1.5,
+                  row=1, col=1, annotation_text="80% Solvency Benchmark", annotation_position="bottom right")
+
+    # Align layout with custom Inter typography, increased spacing, and legend density improvements
     fig.update_layout(
-        title_text="<b>Actuarial ESG - Comparative Decumulation Analysis Dashboard</b>",
+        title_text="<b>Comparative Decumulation Analysis Dashboard</b>",
+        font=dict(family="Inter, system-ui, sans-serif", color="#0F172A"),
         height=550,
         width=1350,
         template="plotly_white",
         showlegend=True,
-        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
-        margin=dict(l=60, r=60, t=100, b=60)
+        legend=dict(
+            orientation="h",
+            yanchor="bottom",
+            y=1.06,                     # Shifted upward slightly to clear headers
+            xanchor="right",
+            x=1,
+            bordercolor="#E2E8F0",
+            borderwidth=1,
+            font=dict(size=10, color="#334155")  # Decreased to 10 for de-cluttering
+        ),
+        margin=dict(l=60, r=60, t=120, b=60)     # Increased top margin to 120
     )
 
     output_html = "esg_advanced_retirement_comparisons.html"

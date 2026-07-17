@@ -4,3 +4,5 @@
 *.egg-info
 *.html
 __pycache__
+build_presets.py
+presets/
