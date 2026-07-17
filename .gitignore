@@ -1,0 +1,6 @@
+.venv
+.vscode
+.pytest_cache
+*.egg-info
+*.html
+__pycache__
