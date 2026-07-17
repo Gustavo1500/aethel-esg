@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-from typing import List, Dict, Any, Union, Optional
+from typing import List, Dict, Any, Union, Optional, Callable
 
 
 class SimulationResults:
@@ -31,14 +31,17 @@ class SimulationResults:
         month: Optional[Union[str, int, List[int]]] = None,
         step: Optional[Union[str, int, List[int]]] = None,
         tenor: Optional[float] = None,
-        annualized: bool = False
+        annualized: bool = False,
+        portfolio_weights: Optional[Dict[str, float]] = None
     ) -> Union[np.ndarray, float]:
         """
         Extracts, transforms, and calculates statistical parameters from the simulation.
         Supports time filtering via 'year', 'month', 'step', or legacy 'time' parameter.
+        
+        Supports portfolio blending queries using 'portfolio_weights'.
         """
         # 1. Fetch base 2D matrix (steps, scenarios)
-        matrix = self._extract_base_matrix(metric, tenor)
+        matrix = self._extract_base_matrix(metric, tenor, portfolio_weights)
 
         # 2. Apply annualization transformations if requested
         if annualized:
@@ -59,6 +62,253 @@ class SimulationResults:
 
         # 5. Collapse dimension 1 (scenarios) according to the requested statistic
         return self._apply_statistics(matrix, stat)
+
+    # --- Portfolio Blending Logic ---
+
+    def calculate_portfolio_returns(self, weights: Dict[str, float]) -> np.ndarray:
+        """
+        Calculates the blended monthly return series for a given portfolio allocation.
+        Assumes constant-mix monthly rebalancing.
+
+        Parameters
+        ----------
+        weights : dict
+            Asset allocation weights, e.g., {"equity": 0.60, "fixed_income": 0.40}.
+            Supported keys:
+              - 'equity', 'stock', 'returns', 'equity_returns' -> Stock returns
+              - 'fixed_income', 'cash', 'cdi', 'deposit_rates', 'fixed_income_short' -> CDI returns
+        """
+        if not weights:
+            raise ValueError("Weights dictionary cannot be empty.")
+
+        # Normalize weights to sum to 1.0
+        total_weight = sum(weights.values())
+        if total_weight <= 0:
+            raise ValueError("Sum of portfolio weights must be greater than zero.")
+        normalized_weights = {k: v / total_weight for k, v in weights.items()}
+
+        blended_returns = np.zeros((self.steps, self.num_scenarios), dtype=np.float64)
+
+        for asset, weight in normalized_weights.items():
+            a = asset.lower().strip()
+            if a in {"equity", "stock", "returns", "equity_returns"}:
+                asset_returns = self._extract_base_matrix("returns")
+            elif a in {"fixed_income", "cash", "cdi", "deposit_rates", "fixed_income_short"}:
+                # Extract monthly returns directly from scenario properties
+                from actuarial_esg.engine.simulator import LazyScenarioList
+                if isinstance(self.scenarios, LazyScenarioList):
+                    asset_returns = self.scenarios.deposit_rates.T
+                else:
+                    asset_returns = np.column_stack([s["deposit_rates"] for s in self.scenarios])
+            else:
+                raise ValueError(
+                    f"Unknown asset class '{asset}'. Supported assets: "
+                    "['equity', 'stock', 'fixed_income', 'cash', 'cdi']"
+                )
+
+            blended_returns += weight * asset_returns
+
+        return blended_returns
+
+    def calculate_portfolio_growth(self, weights: Dict[str, float]) -> np.ndarray:
+        """
+        Calculates the blended cumulative growth series of $1.00 for a given portfolio allocation.
+        Assumes constant-mix monthly rebalancing.
+        """
+        returns = self.calculate_portfolio_returns(weights)
+        # Growth has length self.steps + 1 (t=0 starting at 1.0)
+        growth_pad = np.vstack([np.zeros(self.num_scenarios), returns])
+        return np.cumprod(1.0 + growth_pad, axis=0)
+
+    # --- Decumulation (Withdrawal) Simulator ---
+
+    def simulate_decumulation(
+        self,
+        initial_balance: float,
+        initial_monthly_withdrawal: float,
+        portfolio_weights: Dict[str, float],
+        withdrawal_timing: str = "beginning",
+        inflate_withdrawals: bool = True,
+        frictional_drag_annual: float = 0.0,
+        tax_on_gains_rate: float = 0.0,
+        liquidation_strategy: str = "constant_mix",
+        withdrawal_policy: Optional[Callable[[np.ndarray, np.ndarray, int, np.ndarray], np.ndarray]] = None
+    ) -> Dict[str, np.ndarray]:
+        """
+        Simulates the monthly decumulation of a starting balance, supporting dual-bucket asset 
+        tracking, generic tax-on-gains (cost-basis drag), frictional drag, and custom withdrawal policies.
+
+        Parameters
+        ----------
+        initial_balance : float
+            Starting balance at t=0 (e.g., 1000000).
+        initial_monthly_withdrawal : float
+            Initial monthly withdrawal amount (e.g., 4000).
+        portfolio_weights : dict
+            Asset allocation weights, e.g., {"equity": 0.60, "fixed_income": 0.40}.
+        withdrawal_timing : str, default "beginning"
+            Timing of withdrawals:
+              - 'beginning' / 'advance': Withdrawal is subtracted at the start of each month.
+              - 'end' / 'arrears': Withdrawal is subtracted at the end of each month.
+        inflate_withdrawals : bool, default True
+            If True, monthly withdrawals are adjusted by the simulated CPI index.
+        frictional_drag_annual : float, default 0.0
+            Annualized frictional expense drag (e.g., 0.00344 for 34.4 bps drag), deducted monthly.
+        tax_on_gains_rate : float, default 0.0
+            Tax rate applied only to profitable gains exceeding the average cost-basis (e.g., 0.15 for 15%).
+            Defaults to 0.0 (no tax applied).
+        liquidation_strategy : str, default "constant_mix"
+            Algorithm used to withdraw capital and rebalance:
+              - 'constant_mix': Withdraw proportionally and rebalance back to target weights monthly.
+              - 'cash_first': Withdraw from cash/fixed-income first. Sell equities only if cash is exhausted.
+        withdrawal_policy : callable, optional
+            A vectorized rule to dynamically compute target net withdrawals.
+            Must match signature: f(balance_vector, cpi_vector, step, short_rate_vector) -> target_withdrawal_vector
+
+        Returns
+        -------
+        dict
+            A dictionary containing:
+              - 'balances': Array of shape (steps + 1, num_scenarios) of total portfolio values.
+              - 'equity_balances': Array of shape (steps + 1, num_scenarios) of equity values.
+              - 'fixed_income_balances': Array of shape (steps + 1, num_scenarios) of fixed income values.
+              - 'withdrawals': Array of shape (steps, num_scenarios) of actual withdrawals made (net).
+              - 'taxes_paid': Array of shape (steps, num_scenarios) of taxes paid.
+              - 'probability_of_success': Array of shape (steps + 1,) indicating percentage of solvent scenarios.
+        """
+        from actuarial_esg.engine.simulator import LazyScenarioList
+        is_lazy = isinstance(self.scenarios, LazyScenarioList)
+
+        # 1. Fetch raw underlying asset returns
+        equity_returns = self._extract_base_matrix("returns")
+        if is_lazy:
+            deposit_returns = self.scenarios.deposit_rates.T
+        else:
+            deposit_returns = np.column_stack([s["deposit_rates"] for s in self.scenarios])
+
+        cpis = self._extract_base_matrix("cpi")
+
+        # 2. Pre-allocate state arrays
+        balances = np.zeros((self.steps + 1, self.num_scenarios), dtype=np.float64)
+        equity_balances = np.zeros((self.steps + 1, self.num_scenarios), dtype=np.float64)
+        fixed_income_balances = np.zeros((self.steps + 1, self.num_scenarios), dtype=np.float64)
+        withdrawals = np.zeros((self.steps, self.num_scenarios), dtype=np.float64)
+        taxes_paid = np.zeros((self.steps, self.num_scenarios), dtype=np.float64)
+
+        # 3. Setup starting state
+        total_weights = sum(portfolio_weights.values())
+        eq_weight = portfolio_weights.get("equity", 0.60) / total_weights if "equity" in portfolio_weights else 0.60
+        fi_weight = 1.0 - eq_weight
+
+        balances[0, :] = initial_balance
+        equity_balances[0, :] = initial_balance * eq_weight
+        fixed_income_balances[0, :] = initial_balance * fi_weight
+
+        cost_basis = np.full(self.num_scenarios, initial_balance, dtype=np.float64)
+        timing = withdrawal_timing.lower().strip()
+        frictional_drag_monthly = frictional_drag_annual / 12.0
+
+        for t in range(self.steps):
+            # Resolve inflation factor
+            if inflate_withdrawals and t > 0:
+                cpi_factor = cpis[t - 1, :]
+            else:
+                cpi_factor = np.ones(self.num_scenarios, dtype=np.float64)
+
+            # Determine baseline spending net target
+            if withdrawal_policy is not None:
+                target_w_net = withdrawal_policy(balances[t, :], cpi_factor, t, deposit_returns[t, :])
+            else:
+                target_w_net = np.full(self.num_scenarios, initial_monthly_withdrawal, dtype=np.float64) * cpi_factor
+
+            # Core state transition
+            eq_pre = equity_balances[t, :] * (1.0 + equity_returns[t, :] - frictional_drag_monthly)
+            fi_pre = fixed_income_balances[t, :] * (1.0 + deposit_returns[t, :] - frictional_drag_monthly)
+            w_pre = eq_pre + fi_pre
+
+            # Tax drag calculation
+            if tax_on_gains_rate > 0:
+                # Standard cost-basis accounting applied on profitable gains
+                gain_ratio = np.zeros(self.num_scenarios)
+                profitable_idx = (w_pre > cost_basis) & (cost_basis > 0)
+                gain_ratio[profitable_idx] = (w_pre[profitable_idx] - cost_basis[profitable_idx]) / w_pre[profitable_idx]
+                target_w_gross = target_w_net / (1.0 - tax_on_gains_rate * gain_ratio)
+            else:
+                target_w_gross = target_w_net
+
+            if timing in {"beginning", "advance"}:
+                # 1. Beginning of Month Withdrawal
+                actual_gross = np.minimum(balances[t, :], target_w_gross)
+                actual_net = actual_gross * (target_w_net / np.maximum(1e-9, target_w_gross))
+                tax = actual_gross - actual_net
+
+                # Track withdrawals and taxes
+                withdrawals[t, :] = actual_net
+                taxes_paid[t, :] = tax
+
+                # Adjust cost basis proportional to asset redemption
+                basis_drawn = cost_basis * (actual_gross / np.maximum(1e-9, balances[t, :]))
+                cost_basis = np.maximum(0.0, cost_basis - basis_drawn)
+
+                # Deduct withdrawal using selected strategy
+                if liquidation_strategy.lower().strip() == "cash_first":
+                    fi_rem = np.maximum(0.0, fixed_income_balances[t, :] - actual_gross)
+                    unmet_gross = np.maximum(0.0, actual_gross - fixed_income_balances[t, :])
+                    eq_rem = np.maximum(0.0, equity_balances[t, :] - unmet_gross)
+
+                    # Compound the remaining assets monthly
+                    equity_balances[t + 1, :] = eq_rem * (1.0 + equity_returns[t, :] - frictional_drag_monthly)
+                    fixed_income_balances[t + 1, :] = fi_rem * (1.0 + deposit_returns[t, :] - frictional_drag_monthly)
+                else:
+                    # 'constant_mix' (rebalance monthly)
+                    remaining = np.maximum(0.0, balances[t, :] - actual_gross)
+                    equity_balances[t + 1, :] = remaining * eq_weight * (1.0 + equity_returns[t, :] - frictional_drag_monthly)
+                    fixed_income_balances[t + 1, :] = remaining * fi_weight * (1.0 + deposit_returns[t, :] - frictional_drag_monthly)
+
+                balances[t + 1, :] = equity_balances[t + 1, :] + fixed_income_balances[t + 1, :]
+
+            else:
+                # 2. End of Month Withdrawal (arrears)
+                actual_gross = np.minimum(w_pre, target_w_gross)
+                actual_net = actual_gross * (target_w_net / np.maximum(1e-9, target_w_gross))
+                tax = actual_gross - actual_net
+
+                withdrawals[t, :] = actual_net
+                taxes_paid[t, :] = tax
+
+                # Adjust basis
+                basis_drawn = cost_basis * (actual_gross / np.maximum(1e-9, w_pre))
+                cost_basis = np.maximum(0.0, cost_basis - basis_drawn)
+
+                if liquidation_strategy.lower().strip() == "cash_first":
+                    fi_rem = np.maximum(0.0, fi_pre - actual_gross)
+                    unmet_gross = np.maximum(0.0, actual_gross - fi_pre)
+                    eq_rem = np.maximum(0.0, eq_pre - unmet_gross)
+
+                    equity_balances[t + 1, :] = eq_rem
+                    fixed_income_balances[t + 1, :] = fi_rem
+                else:
+                    remaining = np.maximum(0.0, w_pre - actual_gross)
+                    equity_balances[t + 1, :] = remaining * eq_weight
+                    fixed_income_balances[t + 1, :] = remaining * fi_weight
+
+                balances[t + 1, :] = equity_balances[t + 1, :] + fixed_income_balances[t + 1, :]
+
+        # Track solvency over time
+        probability_of_success = np.mean(balances > 1e-4, axis=1)
+
+        # Cache results for plotting and metrics queries
+        self._cache["decumulation_balance"] = balances
+        self._cache["decumulation_withdrawal"] = withdrawals
+
+        return {
+            "balances": balances,
+            "equity_balances": equity_balances,
+            "fixed_income_balances": fixed_income_balances,
+            "withdrawals": withdrawals,
+            "taxes_paid": taxes_paid,
+            "probability_of_success": probability_of_success
+        }
 
     # --- Time Parameter Mapping Logic ---
 
@@ -116,9 +366,21 @@ class SimulationResults:
 
     # --- Optimized Base Matrix Retrieval (With Memoization) ---
 
-    def _extract_base_matrix(self, metric: str, tenor: Optional[float] = None) -> np.ndarray:
+    def _extract_base_matrix(
+        self,
+        metric: str,
+        tenor: Optional[float] = None,
+        portfolio_weights: Optional[Dict[str, float]] = None
+    ) -> np.ndarray:
         m = metric.lower().strip()
-        cache_key = f"{m}_{tenor}" if tenor is not None else m
+
+        # Build stable cache key for portfolio blends
+        if portfolio_weights is not None:
+            sorted_weights = sorted(portfolio_weights.items())
+            weights_str = "_".join([f"{k}:{v:.4f}" for k, v in sorted_weights])
+            cache_key = f"{m}_{weights_str}"
+        else:
+            cache_key = f"{m}_{tenor}" if tenor is not None else m
 
         # Return cached array if already computed to avoid redundant loops
         if cache_key in self._cache:
@@ -128,7 +390,29 @@ class SimulationResults:
         from actuarial_esg.engine.simulator import LazyScenarioList
         is_lazy = isinstance(self.scenarios, LazyScenarioList)
 
-        if m in {"equity_returns", "returns"}:
+        if m == "portfolio_returns":
+            res = self.calculate_portfolio_returns(portfolio_weights)
+
+        elif m == "portfolio_growth":
+            res = self.calculate_portfolio_growth(portfolio_weights)
+
+        elif m == "decumulation_balance":
+            if "decumulation_balance" not in self._cache:
+                raise ValueError(
+                    "Decumulation balance not simulated yet. Please run "
+                    "simulate_decumulation(...) first to populate the cache."
+                )
+            return self._cache["decumulation_balance"]
+
+        elif m == "decumulation_withdrawal":
+            if "decumulation_withdrawal" not in self._cache:
+                raise ValueError(
+                    "Decumulation withdrawal not simulated yet. Please run "
+                    "simulate_decumulation(...) first to populate the cache."
+                )
+            return self._cache["decumulation_withdrawal"]
+
+        elif m in {"equity_returns", "returns"}:
             if is_lazy:
                 res = self.scenarios.equity_returns.T
             else:
@@ -182,7 +466,8 @@ class SimulationResults:
 
         else:
             raise ValueError(f"Unknown metric '{metric}'. Choose from: "
-                             "returns, growth, cpi, inflation, cdi, nominal_yield, real_yield")
+                             "returns, growth, cpi, inflation, cdi, nominal_yield, real_yield, "
+                             "portfolio_returns, portfolio_growth, decumulation_balance, decumulation_withdrawal")
 
         self._cache[cache_key] = res
         return res
@@ -206,7 +491,7 @@ class SimulationResults:
         safe_sigma_sq = np.maximum(1e-6, sigma ** 2)
         power_factor = (2.0 * theta[:, np.newaxis] * mu) / safe_sigma_sq[:, np.newaxis]
 
-        # Vectorized multiplication and broadcasting across all 100k scenarios
+        # Vectorized multiplication and broadcasting across all scenarios
         yields = r * B_tau_div_tenor[:, np.newaxis]
         yields -= power_factor * log_base_A_div_tenor[:, np.newaxis]
         return yields.T  # returns shape (steps + 1, num_scenarios)
@@ -240,7 +525,7 @@ class SimulationResults:
 
     def _apply_annualization(self, matrix: np.ndarray, metric: str) -> np.ndarray:
         m = metric.lower().strip()
-        if m in {"equity_growth", "growth"}:
+        if m in {"equity_growth", "growth", "portfolio_growth"}:
             steps = np.arange(len(matrix))[:, np.newaxis]
             years = steps / self.steps_per_year
             with np.errstate(divide='ignore', invalid='ignore'):
@@ -492,7 +777,11 @@ class SimulationResults:
 
         fig = go.Figure()
 
-        fig.add_trace(go.Histogram(
+        fig.add_trace(go.Scatter(
+            x=np.arange(len(raw_data)), y=raw_data,
+            mode='markers', marker=dict(color='steelblue', opacity=0.75),
+            name="Scenarios"
+        ) if metric == "yield" else go.Histogram(
             x=raw_data, nbinsx=bins, histnorm='density',
             marker_color='steelblue', opacity=0.75, name="Scenario Density"
         ))

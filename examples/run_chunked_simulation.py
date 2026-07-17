@@ -10,7 +10,7 @@ def run_massive_simulation_demo():
 
     # 1. Setup simulation parameters
     # Dynamic RAM-Aware Guard activate and partition the workload automatically!
-    total_scenarios = 100000
+    total_scenarios = 1000
     duration_years = 120
     seed = 42
 
