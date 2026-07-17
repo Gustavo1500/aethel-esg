@@ -5,4 +5,4 @@
 *.html
 __pycache__
 build_presets.py
-presets/
+examples/compare_region.py
