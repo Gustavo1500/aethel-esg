@@ -38,9 +38,9 @@ class SimulatorConfig:
     mu_J: float = -0.15
     sigma_J: float = 0.10
 
-    # Initial state values
-    initial_cdi: float = 0.10
-    initial_ipca: float = 0.045
+    # Initial state values (Standard international economic terms)
+    initial_rate: float = 0.10
+    initial_inflation: float = 0.045
 
     # Calibrated parameter overrides (filled dynamically by the Calibrator)
     ou_mu: Optional[float] = None

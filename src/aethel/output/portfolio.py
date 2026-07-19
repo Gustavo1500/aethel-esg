@@ -20,7 +20,7 @@ def calculate_portfolio_returns(results, weights: Dict[str, float]) -> np.ndarra
         if a in {"equity", "stock", "returns", "equity_returns"}:
             asset_returns = results._extract_base_matrix("returns")
         elif a in {"fixed_income", "cash", "cdi", "deposit_rates", "fixed_income_short"}:
-            from actuarial_esg.engine.simulator import LazyScenarioList
+            from aethel.engine.simulator import LazyScenarioList
             if isinstance(results.scenarios, LazyScenarioList):
                 asset_returns = results.scenarios.deposit_rates.T
             else:

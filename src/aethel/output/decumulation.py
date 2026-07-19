@@ -16,7 +16,7 @@ def simulate_decumulation(
     """
     Simulates monthly retirement portfolio decumulation with drag, taxes, and dynamic policies.
     """
-    from actuarial_esg.engine.simulator import LazyScenarioList
+    from aethel.engine.simulator import LazyScenarioList
     is_lazy = isinstance(results.scenarios, LazyScenarioList)
 
     equity_returns = results._extract_base_matrix("returns")

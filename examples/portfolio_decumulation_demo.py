@@ -4,7 +4,7 @@ import pandas as pd
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
-from actuarial_esg import SimulatorConfig, MarketSimulator, SimulationResults
+from aethel import SimulatorConfig, MarketSimulator, SimulationResults
 
 
 def run_comprehensive_decumulation_demo():
@@ -12,13 +12,13 @@ def run_comprehensive_decumulation_demo():
     print("      ACTUARIAL ESG - COMPREHENSIVE RETIREMENT DECUMULATION DEMO      ")
     print("======================================================================")
 
-    # 1. Setup economic simulation configuration
+    # 1. Setup economic simulation configuration (Standardized variables)
     config = SimulatorConfig(
         duration_years=40,      # Retirement planning horizon
-        num_scenarios=10000,     # Run 10,000 simulated futures
+        num_scenarios=10000,    # Run 10,000 simulated futures
         seed=42,                # Ensure reproducibility
-        initial_cdi=0.105,      # Starting short-rate at 10.5%
-        initial_ipca=0.045      # Starting annual inflation at 4.5%
+        initial_rate=0.105,     # Starting short-rate at 10.5%
+        initial_inflation=0.045 # Starting annual inflation at 4.5%
     )
 
     print(f"Configuring projection: {config.duration_years} years ({config.steps} months)")
@@ -116,7 +116,6 @@ def run_comprehensive_decumulation_demo():
     print("[Dashboard] Building multi-path interactive comparison charts...")
     years = np.arange(config.steps + 1) / 12
 
-    # Increased horizontal_spacing to 0.14 to resolve y-axis overlaps
     fig = make_subplots(
         rows=1, cols=2,
         subplot_titles=(
@@ -126,7 +125,7 @@ def run_comprehensive_decumulation_demo():
         horizontal_spacing=0.14
     )
 
-    # Elegant Slate-Crimson-Blue-Teal consulting palette
+    # Elegant Slate-Crimson-Blue-Teal palette
     colors = ["#64748B", "#EF4444", "#3B82F6", "#0D9488"]
 
     for idx, (name, data) in enumerate(cases):
@@ -161,7 +160,6 @@ def run_comprehensive_decumulation_demo():
             row=1, col=2
         )
 
-    # Apply soft Slate gridlines and remove explicit zerolines (preventing origin overlap)
     for col_idx in [1, 2]:
         x_axis = f"xaxis{col_idx if col_idx > 1 else ''}"
         y_axis = f"yaxis{col_idx if col_idx > 1 else ''}"
@@ -175,11 +173,10 @@ def run_comprehensive_decumulation_demo():
     fig.update_xaxes(title_text="Horizon (Years)", row=1, col=2)
     fig.update_yaxes(title_text="Portfolio Value ($)", tickprefix="$", row=1, col=2)
 
-    # Soft reference line at 80% solvency target
+    # Reference solvency target line
     fig.add_hline(y=80, line_dash="dash", line_color="#CBD5E1", line_width=1.5,
                   row=1, col=1, annotation_text="80% Solvency Benchmark", annotation_position="bottom right")
 
-    # Align layout with custom Inter typography, increased spacing, and legend density improvements
     fig.update_layout(
         title_text="<b>Comparative Decumulation Analysis Dashboard</b>",
         font=dict(family="Inter, system-ui, sans-serif", color="#0F172A"),
@@ -190,14 +187,14 @@ def run_comprehensive_decumulation_demo():
         legend=dict(
             orientation="h",
             yanchor="bottom",
-            y=1.06,                     # Shifted upward slightly to clear headers
+            y=1.06,
             xanchor="right",
             x=1,
             bordercolor="#E2E8F0",
             borderwidth=1,
-            font=dict(size=10, color="#334155")  # Decreased to 10 for de-cluttering
+            font=dict(size=10, color="#334155")
         ),
-        margin=dict(l=60, r=60, t=120, b=60)     # Increased top margin to 120
+        margin=dict(l=60, r=60, t=120, b=60)
     )
 
     output_html = "esg_advanced_retirement_comparisons.html"
@@ -209,7 +206,6 @@ def run_comprehensive_decumulation_demo():
     except Exception:
          print("Note: Automated browser opening bypassed (headless or terminal execution).")
 
-    # Clean up results cache
     results.cleanup()
 
 

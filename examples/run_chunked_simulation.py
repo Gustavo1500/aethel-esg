@@ -1,15 +1,14 @@
 import time
 import numpy as np
-from actuarial_esg import SimulatorConfig, MarketSimulator, SimulationResults
+from aethel import SimulatorConfig, MarketSimulator, SimulationResults
 
 
 def run_massive_simulation_demo():
     print("======================================================================")
-    print("          ACTUARIAL ESG - HIGH-SCALE IN-MEMORY SIMULATION             ")
+    print("            AETHEL ESG - HIGH-SCALE IN-MEMORY SIMULATION              ")
     print("======================================================================")
 
     # 1. Setup simulation parameters
-    # Dynamic RAM-Aware Guard activate and partition the workload automatically!
     total_scenarios = 1000
     duration_years = 120
     seed = 42
@@ -18,14 +17,14 @@ def run_massive_simulation_demo():
     print(f"Total scenario target:  {total_scenarios:,} scenarios")
     print("Initializing execution engine...")
 
-    # 2. Initialize configuration (letting the simulator handle concurrency and chunking)
+    # 2. Initialize configuration
     config = SimulatorConfig(
         duration_years=duration_years,
         num_scenarios=total_scenarios,
         seed=seed
     )
 
-    # 3. Run simulation engine (Fast Vectorized Implementation with Adaptive RAM Guard)
+    # 3. Run simulation engine
     t0 = time.time()
     simulator = MarketSimulator(config)
     raw_scenarios = simulator.run()
@@ -37,14 +36,14 @@ def run_massive_simulation_demo():
 
     print("\n[Query] Extracting median trajectory paths (50th percentile) across all scenarios...")
 
-    # 5. Extract median macroeconomic variables using the optimized on-the-fly query engine
+    # 5. Extract median macroeconomic variables using standardized metrics
     years = np.arange(duration_years * 12) / 12
 
     # Short rates and inflation (Primary Axis)
-    cdi_median = results.query("cdi", stat="median", step="all")
+    rate_median = results.query("rate", stat="median", step="all")
     inflation_median = results.query("inflation", stat="median", step="all")
 
-    # Long-term yields (Primary Axis) - derived on-the-fly instantly
+    # Long-term yields (Primary Axis)
     yield_nom_10y = results.query("nominal_yield", stat="median", step="all", tenor=10.0)
     yield_real_10y = results.query("real_yield", stat="median", step="all", tenor=10.0)
 
@@ -64,8 +63,8 @@ def run_massive_simulation_demo():
     fig.add_trace(
         go.Scatter(
             x=years,
-            y=cdi_median * 100,
-            name="CDI Short Rate (Median)",
+            y=rate_median * 100,
+            name="Short Rate (Median)",
             line=dict(color="#D32F2F", width=2.5, dash="solid")
         ),
         secondary_y=False
@@ -75,7 +74,7 @@ def run_massive_simulation_demo():
         go.Scatter(
             x=years,
             y=inflation_median * 100,
-            name="IPCA Inflation Rate (Median)",
+            name="Inflation Rate (Median)",
             line=dict(color="#00796B", width=2.5, dash="dash")
         ),
         secondary_y=False
@@ -112,7 +111,7 @@ def run_massive_simulation_demo():
         secondary_y=True
     )
 
-    # Style layout according to actuarial presentation standards
+    # Style layout
     fig.update_layout(
         title=dict(
             text=f"<b>Expected Macroeconomic Medians ({total_scenarios:,} Scenario Simulation)</b>",
@@ -151,7 +150,6 @@ def run_massive_simulation_demo():
         margin=dict(l=60, r=60, t=100, b=60)
     )
 
-    # Save HTML file on disk and launch the active browser window
     output_html = "esg_massive_median_paths.html"
     fig.write_html(output_html)
     print(f"✓ Interactive HTML chart exported to '{output_html}'")
@@ -161,7 +159,6 @@ def run_massive_simulation_demo():
     except Exception:
         print("Note: Automated browser opening bypassed (headless or terminal execution).")
 
-    # 7. Clean up memory allocations
     results.cleanup()
     print("✓ Resource clean-up complete.")
 
@@ -172,3 +169,4 @@ def run_massive_simulation_demo():
 
 if __name__ == "__main__":
     run_massive_simulation_demo()
+    

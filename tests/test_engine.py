@@ -2,8 +2,8 @@ import numpy as np
 import pytest
 from typing import Dict, List
 
-from actuarial_esg import SimulatorConfig, MarketSimulator, SimulationResults
-from actuarial_esg.engine.loops import HAS_NUMBA, run_simulation_loop_numpy
+from aethel import SimulatorConfig, MarketSimulator, SimulationResults
+from aethel.engine.loops import HAS_NUMBA, run_simulation_loop_numpy
 
 
 @pytest.fixture
@@ -13,8 +13,8 @@ def standard_config() -> SimulatorConfig:
         duration_years=5,
         num_scenarios=20,
         seed=101,
-        initial_cdi=0.08,
-        initial_ipca=0.045
+        initial_rate=0.08,
+        initial_inflation=0.045
     )
 
 
@@ -71,7 +71,7 @@ class TestBoundaryConstraints:
         config = SimulatorConfig(
             duration_years=3,
             num_scenarios=10,
-            initial_cdi=-0.05,  # Intentional negative value to test recovery
+            initial_rate=-0.05,  # Intentional negative value to test recovery
             cir_mu_val=-0.02,
             mu_min=0.001
         )
@@ -91,7 +91,7 @@ class TestBoundaryConstraints:
         config = SimulatorConfig(
             duration_years=3,
             num_scenarios=10,
-            initial_ipca=-0.05,  # Intentional negative value to test recovery
+            initial_inflation=-0.05,  # Intentional negative value to test recovery
             ou_mu=-0.03,
             pi_min=pi_min_floor
         )
@@ -177,7 +177,7 @@ class TestNumbaEquivalence:
         sim = MarketSimulator(standard_config)
         results_numba = sim.run()
 
-        from actuarial_esg.engine import simulator as sim_module
+        from aethel.engine import simulator as sim_module
         original_has_numba = sim_module.HAS_NUMBA
         try:
             sim_module.HAS_NUMBA = False
@@ -215,3 +215,4 @@ if __name__ == "__main__":
     print("======================================================================")
 
     sys.exit(exit_code)
+    

@@ -2,24 +2,24 @@ import json
 import os
 import numpy as np
 import pandas as pd
-from actuarial_esg import MarketCalibrator, SimulatorConfig
+from aethel import MarketCalibrator, SimulatorConfig
 
 
 def create_mocksample_csv(filename: str):
     """Generates a mock CSV file containing historical market records."""
     np.random.seed(42)
     rows = 120  # 10 years of monthly data
-    
-    # Generate mock variables
-    cdi = np.clip(np.random.normal(0.09, 0.015, rows), 0.02, 0.15)
-    ipca = np.clip(cdi - 0.04 + np.random.normal(0, 0.005, rows), -0.01, 0.10)
-    ibov_returns = np.random.normal(0.008, 0.05, rows)
-    
+
+    # Generate mock variables using standardized names
+    short_rate = np.clip(np.random.normal(0.09, 0.015, rows), 0.02, 0.15)
+    inflation = np.clip(short_rate - 0.04 + np.random.normal(0, 0.005, rows), -0.01, 0.10)
+    equity_returns = np.random.normal(0.008, 0.05, rows)
+
     df = pd.DataFrame({
         "date": pd.date_range(end="2026-01-01", periods=rows, freq="ME"),
-        "cdi_rate": cdi,
-        "ipca_rate": ipca,
-        "ibov_return": ibov_returns
+        "short_rate": short_rate,
+        "inflation": inflation,
+        "equity_return": equity_returns
     })
     df.to_csv(filename, index=False)
     print(f"[File] Generated sample data file: '{filename}'")
@@ -27,7 +27,7 @@ def create_mocksample_csv(filename: str):
 
 def run_calibration_example():
     print("==================================================")
-    print("      Actuarial ESG - Calibration & Saving        ")
+    print("      Aethel ESG - Calibration & Saving           ")
     print("==================================================")
 
     csv_filename = "historical_market_data.csv"
@@ -43,11 +43,11 @@ def run_calibration_example():
     # 3. Instantiate calibrator and fit parameters
     calibrator = MarketCalibrator()
     print("\n[Calibration] Fitting models to historical series...")
-    
+
     calibrated_config = calibrator.fit(
-        historical_ipca=df["ipca_rate"].values,
-        historical_cdi=df["cdi_rate"].values,
-        historical_equity_returns=df["ibov_return"].values
+        historical_inflation=df["inflation"].values,
+        historical_rates=df["short_rate"].values,
+        historical_equity_returns=df["equity_return"].values
     )
 
     config_dict = calibrated_config.to_dict()
@@ -63,8 +63,8 @@ def run_calibration_example():
     print(f"  - Calibrated Equity Volatility (GBM): {config_dict['gbm_sigma_val']*100:.2f}%")
     print(f"  - Calibrated Inflation target (OU):   {config_dict['ou_mu']*100:.2f}%")
     print(f"  - Calibrated Inflation Volatility:    {config_dict['ou_sigma_val']*100:.2f}%")
-    print(f"  - Calibrated CDI Target Mean (CIR):   {config_dict['cir_mu_val']*100:.2f}%")
-    print(f"  - Calibrated CDI Volatility (CIR):    {config_dict['cir_sigma_val']*100:.2f}%")
+    print(f"  - Calibrated Rate Target Mean (CIR):  {config_dict['cir_mu_val']*100:.2f}%")
+    print(f"  - Calibrated Rate Volatility (CIR):   {config_dict['cir_sigma_val']*100:.2f}%")
     print("-" * 50)
 
     # Clean up mock CSV

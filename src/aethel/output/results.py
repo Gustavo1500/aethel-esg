@@ -130,7 +130,7 @@ class SimulationResults:
             return self._cache[cache_key]
 
         # Check for optimized LazyScenarioList processing
-        from actuarial_esg.engine.simulator import LazyScenarioList
+        from aethel.engine.simulator import LazyScenarioList
         is_lazy = isinstance(self.scenarios, LazyScenarioList)
 
         if m == "portfolio_returns":
@@ -172,14 +172,14 @@ class SimulationResults:
             else:
                 res = np.column_stack([s["cpis"] for s in self.scenarios])
 
-        elif m in {"inflation_rate", "inflation"}:
+        elif m in {"inflation_rate", "inflation", "ipca"}:
             cpis_matrix = self._extract_base_matrix("cpi")
             cpis_padded = np.vstack([np.ones(self.num_scenarios), cpis_matrix])
             with np.errstate(divide='ignore', invalid='ignore'):
                 monthly_rates = (cpis_padded[1:, :] / cpis_padded[:-1, :]) - 1.0
             res = (1.0 + monthly_rates) ** 12 - 1.0
 
-        elif m in {"short_rate", "cdi", "deposit_rates"}:
+        elif m in {"short_rate", "rate", "cdi", "deposit_rates"}:
             if is_lazy:
                 res = (1.0 + self.scenarios.deposit_rates.T) ** 12 - 1.0
             else:
@@ -211,9 +211,9 @@ class SimulationResults:
     # --- On-The-Fly Vectorized Tenor Yield Derivations ---
 
     def _generate_cir_yields_for_tenor(self, tenor: float) -> np.ndarray:
-        """Derives CIR yields for a single tenor across all scenarios instantly."""
-        r = self.scenarios.cdi_paths.T
-        mu = self.scenarios.mu_cdi_paths.T
+        """Derives CIR nominal yields for a single tenor across all scenarios instantly."""
+        r = self.scenarios.rate_paths.T
+        mu = self.scenarios.mu_rate_paths.T
         theta = self.scenarios.cir_theta
         sigma = self.scenarios.cir_sigma
 
@@ -235,7 +235,7 @@ class SimulationResults:
         """Derives Fisher real yields for a single tenor across all scenarios on-the-fly."""
         yields_nominal = self._generate_cir_yields_for_tenor(tenor)
 
-        ipca = self.scenarios.ipca_paths
+        inflation_rates = self.scenarios.inflation_paths
         mu_local = self.scenarios.y_target_paths + self.scenarios.pi_min
 
         theta = self.scenarios.ou_theta
@@ -248,7 +248,7 @@ class SimulationResults:
             1.0 - 0.5 * theta_tau + (theta_tau ** 2) / 6.0
         )
 
-        diff = ipca - mu_local
+        diff = inflation_rates - mu_local
         irp = (self.scenarios.lambda_irp * sigma) * (1.0 - np.exp(-self.scenarios.kappa_irp * tenor))
 
         yields_real = yields_nominal - mu_local
