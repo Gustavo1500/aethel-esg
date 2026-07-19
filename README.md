@@ -1,6 +1,6 @@
-# Actuarial ESG: Economic Scenario Generator
+# 🌀 Aethel: Economic Scenario Generator
 
-An actuarial-grade Economic Scenario Generator (ESG) engine written in Python. This repository contains the open-source core library (`actuarial_esg`), which implements high-performance stochastic asset-liability and macroeconomic models.
+Aethel is an actuarial-grade Economic Scenario Generator (ESG) engine written in Python. This repository contains the open-source core library, which implements high-performance stochastic asset-liability and macroeconomic models.
 
 While the mathematical engine is open-source here for local modeling, we also provide a cloud-hosted, multi-tenant enterprise API. The SaaS infrastructure features automated usage tracking, global regional presets, and persistent state management.
 
@@ -11,7 +11,7 @@ While the mathematical engine is open-source here for local modeling, we also pr
 
 ## Core Capabilities
 
-Actuarial ESG generates correlated, multi-path stochastic simulations of macroeconomic indicators and asset classes to support:
+Aethel generates correlated, multi-path stochastic simulations of macroeconomic indicators and asset classes to support:
 
 *   **Asset-Liability Management (ALM)** and solvency evaluations.
 *   **Retirement Decumulation Profiling** (Sequence of Returns Risk modeling).
@@ -26,9 +26,9 @@ The underlying mathematical engine models the economy using a system of continuo
 
 ---
 
-## Installation
+## ⚙️ Installation
 
-You can install the core open-source library locally to execute simulations on your own hardware.
+The core open-source library can be installed locally to execute simulations.
 
 ### Prerequisites
 *   Python 3.9 or higher
@@ -40,47 +40,70 @@ Clone the repository and install the local package:
 # Navigate to the open-source engine directory
 cd actuarial_esg
 
-# Install core library along with Numba for optimization, and plots for Plotly charts
+# Install core library along with Numba for optimization, and Plotly for charts
 pip install -e ."[numba,plots]"
 ```
 
 ---
 
-## Quickstart Code Examples
+## ⚡ Quickstart Code Examples
 
-### 1. Run a Basic Economic Simulation
-This script initializes the simulator with nominal interest rate and inflation starting values and extracts the resulting trajectories.
+### 1. Calibrate Parameters from Historical Data
+Before running a simulation, the engine parameters are typically calibrated against historical data. This step estimates continuous and jump-diffusion parameters from historical records using Maximum Likelihood Estimation (MLE) and OLS.
 
 ```python
 import numpy as np
-from actuarial_esg import SimulatorConfig, MarketSimulator, SimulationResults
+from aethel import MarketCalibrator
 
-# 1. Define macroeconomic starting states and horizon
-config = SimulatorConfig(
-    duration_years=10,       # 10-year projection horizon
-    num_scenarios=250,       # 250 simulated futures
-    seed=123,                # Seed for reproducible outputs
-    initial_cdi=0.08,        # Start with risk-free rate at 8.0%
-    initial_ipca=0.045       # Start with YoY inflation at 4.5%
+# 1. Generate or load historical monthly observations (minimum 10 months required)
+np.random.seed(42)
+history_length_months = 120
+
+historical_inflation = np.random.normal(0.03, 0.01, history_length_months)
+historical_rates = np.random.normal(0.04, 0.015, history_length_months)
+historical_equity_returns = np.random.normal(0.008, 0.05, history_length_months)
+
+# 2. Fit the ESG models to obtain calibrated parameters
+calibrator = MarketCalibrator()
+calibrated_config = calibrator.fit(
+    historical_inflation=historical_inflation,
+    historical_rates=historical_rates,
+    historical_equity_returns=historical_equity_returns
 )
 
-# 2. Run simulation engine
-simulator = MarketSimulator(config)
+# 3. Configure the projection horizon and scenario count on the calibrated config
+calibrated_config.duration_years = 10
+calibrated_config.num_scenarios = 250
+calibrated_config.seed = 123
+
+print(f"Calibrated Equity Volatility (GBM): {calibrated_config.gbm_sigma_val * 100:.2f}%")
+print(f"Calibrated Inflation Target (OU): {calibrated_config.ou_mu * 100:.2f}%")
+```
+
+### 2. Run an Economic Simulation
+Initialize the simulator with the calibrated configuration (or a customized configuration) to extract simulated economic trajectories.
+
+```python
+from aethel import MarketSimulator, SimulationResults
+
+# 1. Run simulation engine using the calibrated configuration from Step 1
+simulator = MarketSimulator(calibrated_config)
 scenarios = simulator.run()
 
-# 3. Compile and analyze statistical paths
+# 2. Compile and analyze statistical paths
 results = SimulationResults(scenarios)
 median_equity_growth = results.query("equity_growth", stat="median", year=10.0)
 
 print(f"Median compounding factor of $1.00 after 10 years: ${median_equity_growth:.2f}")
 ```
 
-### 2. Simulate Retirement Portfolio Decumulation
-Evaluate retirement nest-egg survival rates under path-dependent sequences of returns.
+### 3. Simulate Retirement Portfolio Decumulation
+Evaluate retirement nest-egg survival rates under path-dependent sequences of returns using simulated outcomes.
 
 ```python
-from actuarial_esg import SimulatorConfig, MarketSimulator, SimulationResults
+from aethel import SimulatorConfig, MarketSimulator, SimulationResults
 
+# Initialize a standard baseline configuration
 config = SimulatorConfig(duration_years=30, num_scenarios=1000, seed=42)
 simulator = MarketSimulator(config)
 results = SimulationResults(simulator.run())
@@ -101,52 +124,49 @@ print(f"Portfolio Solvency Probability at Year 30: {final_solvency * 100:.1f}%")
 
 ---
 
-## Repository Structure
+## 📁 Repository Structure
 
 ```text
 actuarial_esg/
-├── index.html                       # Tailwind/Plotly SPA for GitHub Pages interactive demo
-├── build_presets.py                 # Fetches macroeconomic historical data to calibrate regional files
 ├── pyproject.toml                   # Python package metadata & dependencies
 ├── requirements.txt                 # Minimum requirement specifications
 ├── presets/
 │   └── usa.json                     # Pre-calibrated United States macroeconomic baseline parameters
 ├── demo/
 │   ├── logo.png                     # Logo branding asset
-│   ├── demo_database.json           # Compact pre-calculated scenario database used by index.html
-│   └── generate_demo_cache.py       # Combinatorial script to pre-calculate and compile demo_database.json
+│   ├── demo_database.json           # Compact pre-calculated scenario database
+│   └── generate_demo_cache.py       # Pre-calculates and compiles demo_database.json
 ├── examples/                        # Specialized mathematical modeling templates
 │   ├── basic_simulation.py          # Quickstart run of economic projections
 │   ├── run_calibration.py           # Calibration & parameters export from historical CSVs
-│   ├── compare_region.py            # Compares retirement solvency curve across global configurations
 │   ├── portfolio_decumulation_demo.py # Compares constant-mix vs cash-first with guardrails
 │   ├── fire_integration.py          # Calibrates and outputs dataframes to support FIRE models
 │   ├── run_chunked_simulation.py    # Memory-safe execution of high-horizon simulations
 │   └── visualize_scenarios.py       # Interactive Plotly dashboard assembly
 ├── src/
-│   └── actuarial_esg/               # Packaged Python library source code
+│   └── aethel/                      # Packaged Python library source code
 │       ├── calibration/             # Parameter estimation logic (OLS, MLE solvers)
 │       ├── engine/                  # Core stochastic processes & simulation loops
 │       └── output/                  # Downstream metrics, portfolio, & decumulation engines
 └── tests/
-    └── test.py                      # Core regression & boundary condition mathematical assertions
+    └── test_engine.py               # Core regression & boundary condition mathematical assertions
 ```
 
 ---
 
 ## Developer Performance Optimizations
 
-The open-source core includes advanced memory-management and CPU-optimization paradigms:
+The Aethel library includes options for memory management and performance scaling:
 
 *   **Memory-Safe Lazy Evaluation**: Generating term structures (nominal and real yields) for multiple maturities across thousands of scenarios is memory-intensive. The engine uses a `LazyScenarioList` to keep primary arrays contiguous in memory, deriving yield curves dynamically only when accessed.
 *   **Hardware-Aware Concurrency**: The simulation detects host RAM and CPU capacity to automatically partition simulations into memory-safe blocks, avoiding concurrent page-fault issues in shared environments.
-*   **Fastmath Compilations**: If `numba` is detected, the engine runs fully JIT-compiled loops with parallel execution capabilities.
+*   **Fastmath Compilations**: If `numba` is detected, the engine runs JIT-compiled loops with parallel execution capabilities.
 
 ---
 
-## SaaS Cloud Infrastructure
+## 💻 SaaS Cloud Infrastructure
 
-The closed-source enterprise cloud platform wraps this engine in a production API:
+The enterprise cloud platform wraps the Aethel engine in a production API:
 
 *   **Application Server**: Deployed as a scalable FastAPI service hosted on **Render**.
 *   **Database Engine**: Backed by **Neon (PostgreSQL)**, utilizing a serverless architecture to manage user state, transactional API usage metrics, and cryptographically hashed API keys (SHA-256).
@@ -161,4 +181,4 @@ API access keys are available for testing and commercial production. You can req
 
 ## License
 
-The engine open-sourced here is released under the [MIT License](https://opensource.org/licenses/MIT). All SaaS architecture, cloud multi-tenant database models, and deployment configurations remain proprietary.
+The Aethel engine open-sourced here is released under the [MIT License](https://opensource.org/licenses/MIT). All SaaS architecture, cloud multi-tenant database models, and deployment configurations remain proprietary.
