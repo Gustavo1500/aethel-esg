@@ -150,6 +150,7 @@ actuarial_esg/
 │       └── output/                  # Downstream metrics, portfolio, & decumulation engines
 └── tests/
     └── test_engine.py               # Core regression & boundary condition mathematical assertions
+    └── test_robustness.py           # Robustness test of the project - both tests have 88% project coverage
 ```
 
 ---

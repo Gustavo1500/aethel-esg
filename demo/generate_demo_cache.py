@@ -15,11 +15,11 @@ PRESETS_DIR = "presets"
 OUTPUT_FILE = "demo/demo_database.json"
 
 
-def load_usa_config() -> SimulatorConfig:
-    """Loads default USA parameters from presets directory."""
-    path = os.path.join(PRESETS_DIR, "usa.json")
+def load_preset_config() -> SimulatorConfig:
+    """Loads default preset parameters from presets directory."""
+    path = os.path.join(PRESETS_DIR, "world.json")
     if not os.path.exists(path):
-        raise FileNotFoundError(f"Missing 'usa.json' in {PRESETS_DIR}. Run build_presets.py first.")
+        raise FileNotFoundError(f"Missing 'world.json' in {PRESETS_DIR}. Run build_presets.py first.")
 
     with open(path, "r") as f:
         preset_dict = json.load(f)
@@ -50,7 +50,7 @@ def main():
     print(" Aethel ESG - Compiling Multi-Target Demo Cache   ")
     print("==================================================")
 
-    config = load_usa_config()
+    config = load_preset_config()
     config.duration_years = HORIZON_YEARS
     config.num_scenarios = 1000  # High scenario count for high-quality statistics
     config.seed = 42
@@ -58,7 +58,7 @@ def main():
 
     db = {
         "metadata": {
-            "preset": "usa",
+            "preset": "world",
             "scenarios": config.num_scenarios,
             "horizon_years": HORIZON_YEARS,
             "inflation_targets": INFLATION_TARGETS,
