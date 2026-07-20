@@ -35,7 +35,7 @@
             <!-- Brand Layout -->
             <div class="flex items-center gap-4">
                 <div class="flex items-center justify-center h-12 w-auto bg-white rounded px-3 border border-slate-150 shadow-sm">
-                    <img src="demo/logo.png" alt="Aethel Logo" class="h-10 w-auto object-contain mix-blend-multiply">
+                    <img src="logo.png" alt="Aethel Logo" class="h-10 w-auto object-contain mix-blend-multiply">
                 </div>
                 <div class="border-l border-slate-200 dark:border-slate-700 pl-4">
                     <div class="flex items-center gap-2">
@@ -229,7 +229,7 @@
 
         async function init() {
             try {
-                const response = await fetch('demo/demo_database.json');
+                const response = await fetch('demo_database.json');
                 demoDb = await response.json();
 
                 setupSymmetricLabels('target-slider', 'target-labels', [2, 4, 6], '%');
