@@ -4,7 +4,7 @@ Aethel is an actuarial-grade Economic Scenario Generator (ESG) engine written in
 
 While the mathematical engine is open-source here for local modeling, we also provide a cloud-hosted, multi-tenant enterprise API. The SaaS infrastructure features automated usage tracking, global regional presets, and persistent state management.
 
-*   **Live Interactive Demo:** [View the Interactive ESG Dashboard](https://aethel-api.onrender.com) *(Hosted directly via this repo's `index.html`)*
+*   **Live Interactive Demo:** [View the Interactive ESG Dashboard](https://aethel-esg.vercel.app/) *(Hosted directly via this repo's `index.html`)*
 *   **Request API Access:** Get a cloud API key at [Tally Key Request Form](https://tally.so/r/eqj5Eq).
 
 ---
@@ -136,6 +136,8 @@ actuarial_esg/
 │   ├── logo.png                     # Logo branding asset
 │   ├── demo_database.json           # Compact pre-calculated scenario database
 │   └── generate_demo_cache.py       # Pre-calculates and compiles demo_database.json
+│   └── index.html                   # The frontend of the interactive demo
+
 ├── examples/                        # Specialized mathematical modeling templates
 │   ├── basic_simulation.py          # Quickstart run of economic projections
 │   ├── run_calibration.py           # Calibration & parameters export from historical CSVs
