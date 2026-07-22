@@ -6,6 +6,7 @@ While the mathematical engine is open-source here for local modeling, we also pr
 
 *   **Live Interactive Demo:** [View the Interactive ESG Dashboard](https://aethel-esg.vercel.app/) *(Hosted directly via this repo's `index.html`)*
 *   **Request API Access:** Get a cloud API key at [Tally Key Request Form](https://tally.so/r/eqj5Eq).
+*   **Official Documentation:** [View Documentation & API Reference](https://Gustavo1500.github.io/aethel-esg/)
 
 ---
 
