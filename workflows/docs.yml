@@ -1,0 +1,36 @@
+name: Deploy Documentation
+
+on:
+  push:
+    branches:
+      - main  # Adjust this if your default branch is named master
+
+permissions:
+  contents: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+          cache: "pip"
+
+      - name: Install dependencies and package
+        run: |
+          python -m pip install --upgrade pip
+          # We install the package in editable mode along with docs dependencies
+          # so that mkdocstrings can import aethel modules to extract docstrings
+          pip install -e .[docs,numba,plots]
+
+      - name: Build and Deploy to GitHub Pages
+        run: |
+          # mkdocs gh-deploy automatically builds the site, commits it to the gh-pages branch,
+          # and pushes it to GitHub, triggering GitHub Pages to host it.
+          mkdocs gh-deploy --force
+          

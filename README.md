@@ -37,8 +37,11 @@ The core open-source library can be installed locally to execute simulations.
 Clone the repository and install the local package:
 
 ```bash
-# Navigate to the open-source engine directory
-cd actuarial_esg
+# Clone the repository
+git clone https://github.com/gustavo1500/aethel-esg.git
+
+# Install the package locally with visualization and optimization dependencies
+cd aethel-esg
 
 # Install core library along with Numba for optimization, and Plotly for charts
 pip install -e ."[numba,plots]"
