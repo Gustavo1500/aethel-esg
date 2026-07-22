@@ -1,0 +1,1292 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Actuarial-grade economic scenario generation engine in Python.">
+      
+      
+        <meta name="author" content="Gustavo1500">
+      
+      
+      
+        <link rel="prev" href="../calibration/">
+      
+      
+        <link rel="next" href="../query/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>Retirement Decumulation - Aethel Economic Scenario Generator</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/_mkdocstrings.css">
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="slate" data-md-color-accent="cyan">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#retirement-decumulation-simulator" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="Aethel Economic Scenario Generator" class="md-header__button md-logo" aria-label="Aethel Economic Scenario Generator" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Aethel Economic Scenario Generator
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Retirement Decumulation
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="slate" data-md-color-accent="cyan"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="slate" data-md-color-accent="cyan"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../.." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../mathematics/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Mathematical Framework
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    
+  
+  
+    
+    
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="../calibration/" class="md-tabs__link">
+          
+  
+  
+  User Guides
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../api/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  API Reference
+
+      </a>
+    </li>
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="Aethel Economic Scenario Generator" class="md-nav__button md-logo" aria-label="Aethel Economic Scenario Generator" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Aethel Economic Scenario Generator
+  </label>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../mathematics/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Mathematical Framework
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    User Guides
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    User Guides
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../calibration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Model Calibration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Retirement Decumulation
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Retirement Decumulation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#1-liquidation-strategies" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Liquidation Strategies
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="1. Liquidation Strategies">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#strategy-a-constant-mix-constant_mix" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Strategy A: Constant Mix (constant_mix)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#strategy-b-cash-first-cash_first" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Strategy B: Cash First (cash_first)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-mathematical-framework" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Mathematical Framework
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="2. Mathematical Framework">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#inflation-adjustment" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Inflation Adjustment
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#frictional-drag-application" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Frictional Drag Application
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#cost-basis-and-capital-gains-taxation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Cost-Basis and Capital Gains Taxation
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-withdrawal-timing-logic" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Withdrawal Timing Logic
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="3. Withdrawal Timing Logic">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#beginning-of-period-beginning-advance" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Beginning of Period ("beginning" / "advance")
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#end-of-period-end" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        End of Period ("end")
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-practical-implementation-examples" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Practical Implementation Examples
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="4. Practical Implementation Examples">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#example-1-standard-4-rule-with-constant-mix-rebalancing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Example 1: Standard 4% Rule with Constant Mix Rebalancing
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#example-2-comparing-constant-mix-vs-cash-first-liquidation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Example 2: Comparing Constant Mix vs. Cash-First Liquidation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#example-3-swr-with-capital-gains-tax-management-fees-and-spending-guardrails" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Example 3: SWR with Capital Gains Tax, Management Fees, and Spending Guardrails
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../query/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Querying
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../visualization/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Visualization
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#1-liquidation-strategies" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Liquidation Strategies
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="1. Liquidation Strategies">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#strategy-a-constant-mix-constant_mix" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Strategy A: Constant Mix (constant_mix)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#strategy-b-cash-first-cash_first" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Strategy B: Cash First (cash_first)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-mathematical-framework" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Mathematical Framework
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="2. Mathematical Framework">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#inflation-adjustment" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Inflation Adjustment
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#frictional-drag-application" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Frictional Drag Application
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#cost-basis-and-capital-gains-taxation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Cost-Basis and Capital Gains Taxation
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-withdrawal-timing-logic" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Withdrawal Timing Logic
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="3. Withdrawal Timing Logic">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#beginning-of-period-beginning-advance" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Beginning of Period ("beginning" / "advance")
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#end-of-period-end" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        End of Period ("end")
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-practical-implementation-examples" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Practical Implementation Examples
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="4. Practical Implementation Examples">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#example-1-standard-4-rule-with-constant-mix-rebalancing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Example 1: Standard 4% Rule with Constant Mix Rebalancing
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#example-2-comparing-constant-mix-vs-cash-first-liquidation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Example 2: Comparing Constant Mix vs. Cash-First Liquidation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#example-3-swr-with-capital-gains-tax-management-fees-and-spending-guardrails" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Example 3: SWR with Capital Gains Tax, Management Fees, and Spending Guardrails
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+
+<h1 id="retirement-decumulation-simulator">Retirement Decumulation Simulator<a class="headerlink" href="#retirement-decumulation-simulator" title="Permanent link">&para;</a></h1>
+<p>The Aethel decumulation engine models monthly retirement portfolio cash flows under stochastic pathways. This guide explains the core liquidation strategies, cost-basis accounting, taxation mechanics, withdrawal timing, and how to apply custom spending policies using code examples.</p>
+<hr />
+<h2 id="1-liquidation-strategies">1. Liquidation Strategies<a class="headerlink" href="#1-liquidation-strategies" title="Permanent link">&para;</a></h2>
+<p>When executing withdrawals from a multi-asset portfolio, the engine supports two distinct liquidation methods:</p>
+<h3 id="strategy-a-constant-mix-constant_mix">Strategy A: Constant Mix (<code>constant_mix</code>)<a class="headerlink" href="#strategy-a-constant-mix-constant_mix" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Behavior:</strong> The portfolio is rebalanced back to its target weights (e.g., <span class="arithmatex">\(60\%\)</span> Equity / <span class="arithmatex">\(40\%\)</span> Fixed Income) at the start of each month.</li>
+<li><strong>Execution:</strong> Withdrawals are taken proportionally from all asset classes to maintain the target asset mix.</li>
+<li><strong>Mathematical representation of the target allocation:</strong>
+<br />
+<div class="arithmatex">
+  \[
+  E_{t} = B_{t} \times w_{\text{equity}}, \quad F_{t} = B_{t} \times (1 - w_{\text{equity}})
+  \]
+  </div>
+</li>
+</ul>
+<h3 id="strategy-b-cash-first-cash_first">Strategy B: Cash First (<code>cash_first</code>)<a class="headerlink" href="#strategy-b-cash-first-cash_first" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Behavior:</strong> Withdrawals are drawn from the fixed-income allocation first. Equity holdings are left untouched unless the fixed-income balance is entirely depleted.</li>
+<li><strong>Execution:</strong> If the required withdrawal exceeds the available fixed income, the remaining balance is liquidated from the equity portion. This strategy acts as a buffer against sequence-of-returns risk during equity market drawdowns.</li>
+</ul>
+<hr />
+<h2 id="2-mathematical-framework">2. Mathematical Framework<a class="headerlink" href="#2-mathematical-framework" title="Permanent link">&para;</a></h2>
+<p>The simulation updates portfolio values, taxes, fees, and cost basis monthly using the following sequential steps:</p>
+<h3 id="inflation-adjustment">Inflation Adjustment<a class="headerlink" href="#inflation-adjustment" title="Permanent link">&para;</a></h3>
+<p>If <code>inflate_withdrawals=True</code> is configured, the nominal net withdrawal target for month <span class="arithmatex">\(t\)</span> is adjusted based on the Cumulative Consumer Price Index (<span class="arithmatex">\(\text{CPI}\)</span>) from the preceding month:</p>
+<div class="arithmatex">
+\[
+W_{\text{net}, t} = W_{\text{initial}} \times \text{CPI}_{t-1}
+\]
+</div>
+
+<h3 id="frictional-drag-application">Frictional Drag Application<a class="headerlink" href="#frictional-drag-application" title="Permanent link">&para;</a></h3>
+<p>Investment management fees or structural advisor costs are represented by the annualized parameter <span class="arithmatex">\(f_{\text{annual}}\)</span>. This is converted to a monthly rate and applied directly as a deduction from asset returns:</p>
+<div class="arithmatex">
+\[
+f_m = \frac{f_{\text{annual}}}{12}
+\]
+</div>
+
+<h3 id="cost-basis-and-capital-gains-taxation">Cost-Basis and Capital Gains Taxation<a class="headerlink" href="#cost-basis-and-capital-gains-taxation" title="Permanent link">&para;</a></h3>
+<p>When a capital gains tax rate (<span class="arithmatex">\(\tau\)</span>) is applied via <code>tax_on_gains_rate</code>, the engine tracks the cumulative unliquidated principal (cost basis, <span class="arithmatex">\(C_t\)</span>).</p>
+<p>If the pre-withdrawal portfolio value (<span class="arithmatex">\(W_{\text{pre}}\)</span>) is greater than the remaining cost basis (<span class="arithmatex">\(C_t\)</span>), a profit has occurred. The proportion of the portfolio representing taxable gain is defined by the <strong>Gain Ratio</strong>:</p>
+<div class="arithmatex">
+\[
+\text{Gain Ratio}_t = \max\left(0, \frac{W_{\text{pre}} - C_t}{W_{\text{pre}}}\right)
+\]
+</div>
+
+<p>To ensure the retiree receives the exact target net withdrawal (<span class="arithmatex">\(W_{\text{net}, t}\)</span>) after tax has been withheld, the required <strong>Gross Withdrawal</strong> is calculated as:</p>
+<div class="arithmatex">
+\[
+W_{\text{gross}, t} = \frac{W_{\text{net}, t}}{1.0 - (\tau \times \text{Gain Ratio}_t)}
+\]
+</div>
+
+<p>The cost basis is then reduced proportionally to the share of the total portfolio liquidated:</p>
+<div class="arithmatex">
+\[
+C_{t+1} = C_t - C_t \times \left(\frac{W_{\text{gross}, t}}{W_{\text{pre}}}\right)
+\]
+</div>
+
+<blockquote>
+<p><strong>Note on Cost-Basis Accounting Scope:</strong> 
+The decumulation engine uses an <strong>aggregate portfolio-wide cost basis</strong> (modeled after the average cost method across total balances) rather than asset-specific or lot-specific tracking (such as FIFO, LIFO, or HIFO). All tax calculations assume that withdrawals represent a proportional mix of capital return and capital gains across the entire portfolio balance (<span class="arithmatex">\(W_{\text{pre}}\)</span>).</p>
+</blockquote>
+<hr />
+<h2 id="3-withdrawal-timing-logic">3. Withdrawal Timing Logic<a class="headerlink" href="#3-withdrawal-timing-logic" title="Permanent link">&para;</a></h2>
+<p>The parameter <code>withdrawal_timing</code> determines the chronological order of transactions within each monthly step:</p>
+<h3 id="beginning-of-period-beginning-advance">Beginning of Period (<code>"beginning"</code> / <code>"advance"</code>)<a class="headerlink" href="#beginning-of-period-beginning-advance" title="Permanent link">&para;</a></h3>
+<p>Withdrawals are subtracted from asset balances at the <em>start</em> of the month before market growth or fees are applied.
+1. Withdrawals are deducted from current balances (<span class="arithmatex">\(E_t\)</span>, <span class="arithmatex">\(F_t\)</span>) to establish remaining post-withdrawal balances.
+2. Cost basis is adjusted downward based on starting balances.
+3. Remaining balances are multiplied by the asset return rates for that period:
+ <br />
+<div class="arithmatex">
+   \[
+   E_{t+1} = E_{\text{remaining}} \times (1 + R_{E, t} - f_m)
+   \]
+   \[
+   F_{t+1} = F_{\text{remaining}} \times (1 + R_{F, t} - f_m)
+   \]
+   </div>
+</p>
+<h3 id="end-of-period-end">End of Period (<code>"end"</code>)<a class="headerlink" href="#end-of-period-end" title="Permanent link">&para;</a></h3>
+<p>Asset balances grow first, and withdrawals are subtracted from the grown balances at the <em>end</em> of the month.
+1. Asset values are updated with monthly returns and fees:
+ <br />
+<div class="arithmatex">
+   \[
+   E_{\text{pre}} = E_t \times (1 + R_{E, t} - f_m)
+   \]
+   \[
+   F_{\text{pre}} = F_t \times (1 + R_{F, t} - f_m)
+   \]
+   </div></p>
+<ol>
+<li>Withdrawals are executed against <span class="arithmatex">\(E_{\text{pre}}\)</span> and <span class="arithmatex">\(F_{\text{pre}}\)</span>.</li>
+<li>Cost basis is adjusted downward based on the pre-withdrawal values.</li>
+</ol>
+<hr />
+<h2 id="4-practical-implementation-examples">4. Practical Implementation Examples<a class="headerlink" href="#4-practical-implementation-examples" title="Permanent link">&para;</a></h2>
+<p>Below are three code examples demonstrating how to configure and execute decumulation simulations under different planning scenarios.</p>
+<h3 id="example-1-standard-4-rule-with-constant-mix-rebalancing">Example 1: Standard 4% Rule with Constant Mix Rebalancing<a class="headerlink" href="#example-1-standard-4-rule-with-constant-mix-rebalancing" title="Permanent link">&para;</a></h3>
+<p>This example runs a baseline decumulation simulation using a 60/40 portfolio rebalanced monthly, adjusting withdrawals for inflation without taxes or fee drag.</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">aethel</span><span class="w"> </span><span class="kn">import</span> <span class="n">SimulatorConfig</span><span class="p">,</span> <span class="n">MarketSimulator</span><span class="p">,</span> <span class="n">SimulationResults</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="c1"># 1. Generate underlying macroeconomic paths</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="n">config</span> <span class="o">=</span> <span class="n">SimulatorConfig</span><span class="p">(</span><span class="n">duration_years</span><span class="o">=</span><span class="mi">30</span><span class="p">,</span> <span class="n">num_scenarios</span><span class="o">=</span><span class="mi">2000</span><span class="p">,</span> <span class="n">seed</span><span class="o">=</span><span class="mi">42</span><span class="p">)</span>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="n">simulator</span> <span class="o">=</span> <span class="n">MarketSimulator</span><span class="p">(</span><span class="n">config</span><span class="p">)</span>
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="n">results</span> <span class="o">=</span> <span class="n">SimulationResults</span><span class="p">(</span><span class="n">simulator</span><span class="o">.</span><span class="n">run</span><span class="p">())</span>
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>
+</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="c1"># 2. Run decumulation simulation (4% rule on $1M = $40,000 annually)</span>
+</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="n">decum_baseline</span> <span class="o">=</span> <span class="n">results</span><span class="o">.</span><span class="n">simulate_decumulation</span><span class="p">(</span>
+</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>    <span class="n">initial_balance</span><span class="o">=</span><span class="mf">1000000.0</span><span class="p">,</span>
+</span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>    <span class="n">initial_monthly_withdrawal</span><span class="o">=</span><span class="mf">3333.33</span><span class="p">,</span>
+</span><span id="__span-0-13"><a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>    <span class="n">portfolio_weights</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;equity&quot;</span><span class="p">:</span> <span class="mf">0.60</span><span class="p">,</span> <span class="s2">&quot;fixed_income&quot;</span><span class="p">:</span> <span class="mf">0.40</span><span class="p">},</span>
+</span><span id="__span-0-14"><a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a>    <span class="n">liquidation_strategy</span><span class="o">=</span><span class="s2">&quot;constant_mix&quot;</span><span class="p">,</span>
+</span><span id="__span-0-15"><a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a>    <span class="n">withdrawal_timing</span><span class="o">=</span><span class="s2">&quot;beginning&quot;</span><span class="p">,</span>
+</span><span id="__span-0-16"><a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a>    <span class="n">inflate_withdrawals</span><span class="o">=</span><span class="kc">True</span>
+</span><span id="__span-0-17"><a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a><span class="p">)</span>
+</span><span id="__span-0-18"><a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a>
+</span><span id="__span-0-19"><a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a><span class="c1"># 3. Analyze probability of success over the horizon</span>
+</span><span id="__span-0-20"><a id="__codelineno-0-20" name="__codelineno-0-20" href="#__codelineno-0-20"></a><span class="n">solvency_by_year</span> <span class="o">=</span> <span class="n">decum_baseline</span><span class="p">[</span><span class="s2">&quot;probability_of_success&quot;</span><span class="p">]</span>
+</span><span id="__span-0-21"><a id="__codelineno-0-21" name="__codelineno-0-21" href="#__codelineno-0-21"></a><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Year 10 Solvency: </span><span class="si">{</span><span class="n">solvency_by_year</span><span class="p">[</span><span class="mi">120</span><span class="p">]</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">100</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">%&quot;</span><span class="p">)</span>
+</span><span id="__span-0-22"><a id="__codelineno-0-22" name="__codelineno-0-22" href="#__codelineno-0-22"></a><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Year 20 Solvency: </span><span class="si">{</span><span class="n">solvency_by_year</span><span class="p">[</span><span class="mi">240</span><span class="p">]</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">100</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">%&quot;</span><span class="p">)</span>
+</span><span id="__span-0-23"><a id="__codelineno-0-23" name="__codelineno-0-23" href="#__codelineno-0-23"></a><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Year 30 Solvency: </span><span class="si">{</span><span class="n">solvency_by_year</span><span class="p">[</span><span class="mi">360</span><span class="p">]</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">100</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">%&quot;</span><span class="p">)</span>
+</span></code></pre></div>
+<hr />
+<h3 id="example-2-comparing-constant-mix-vs-cash-first-liquidation">Example 2: Comparing Constant Mix vs. Cash-First Liquidation<a class="headerlink" href="#example-2-comparing-constant-mix-vs-cash-first-liquidation" title="Permanent link">&para;</a></h3>
+<p>This example evaluates the impact of changing the liquidation strategy to Cash-First, preserving equities during market fluctuations.</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">aethel</span><span class="w"> </span><span class="kn">import</span> <span class="n">SimulatorConfig</span><span class="p">,</span> <span class="n">MarketSimulator</span><span class="p">,</span> <span class="n">SimulationResults</span>
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="n">config</span> <span class="o">=</span> <span class="n">SimulatorConfig</span><span class="p">(</span><span class="n">duration_years</span><span class="o">=</span><span class="mi">30</span><span class="p">,</span> <span class="n">num_scenarios</span><span class="o">=</span><span class="mi">2000</span><span class="p">,</span> <span class="n">seed</span><span class="o">=</span><span class="mi">123</span><span class="p">)</span>
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="n">simulator</span> <span class="o">=</span> <span class="n">MarketSimulator</span><span class="p">(</span><span class="n">config</span><span class="p">)</span>
+</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="n">results</span> <span class="o">=</span> <span class="n">SimulationResults</span><span class="p">(</span><span class="n">simulator</span><span class="o">.</span><span class="n">run</span><span class="p">())</span>
+</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>
+</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="c1"># Strategy A: Constant Mix</span>
+</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="n">res_constant_mix</span> <span class="o">=</span> <span class="n">results</span><span class="o">.</span><span class="n">simulate_decumulation</span><span class="p">(</span>
+</span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a>    <span class="n">initial_balance</span><span class="o">=</span><span class="mf">1000000.0</span><span class="p">,</span>
+</span><span id="__span-1-11"><a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a>    <span class="n">initial_monthly_withdrawal</span><span class="o">=</span><span class="mf">4500.0</span><span class="p">,</span> <span class="c1"># $54k annual withdrawal rate</span>
+</span><span id="__span-1-12"><a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a>    <span class="n">portfolio_weights</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;equity&quot;</span><span class="p">:</span> <span class="mf">0.60</span><span class="p">,</span> <span class="s2">&quot;fixed_income&quot;</span><span class="p">:</span> <span class="mf">0.40</span><span class="p">},</span>
+</span><span id="__span-1-13"><a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a>    <span class="n">liquidation_strategy</span><span class="o">=</span><span class="s2">&quot;constant_mix&quot;</span>
+</span><span id="__span-1-14"><a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a><span class="p">)</span>
+</span><span id="__span-1-15"><a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a>
+</span><span id="__span-1-16"><a id="__codelineno-1-16" name="__codelineno-1-16" href="#__codelineno-1-16"></a><span class="c1"># Strategy B: Cash First</span>
+</span><span id="__span-1-17"><a id="__codelineno-1-17" name="__codelineno-1-17" href="#__codelineno-1-17"></a><span class="n">res_cash_first</span> <span class="o">=</span> <span class="n">results</span><span class="o">.</span><span class="n">simulate_decumulation</span><span class="p">(</span>
+</span><span id="__span-1-18"><a id="__codelineno-1-18" name="__codelineno-1-18" href="#__codelineno-1-18"></a>    <span class="n">initial_balance</span><span class="o">=</span><span class="mf">1000000.0</span><span class="p">,</span>
+</span><span id="__span-1-19"><a id="__codelineno-1-19" name="__codelineno-1-19" href="#__codelineno-1-19"></a>    <span class="n">initial_monthly_withdrawal</span><span class="o">=</span><span class="mf">4500.0</span><span class="p">,</span>
+</span><span id="__span-1-20"><a id="__codelineno-1-20" name="__codelineno-1-20" href="#__codelineno-1-20"></a>    <span class="n">portfolio_weights</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;equity&quot;</span><span class="p">:</span> <span class="mf">0.60</span><span class="p">,</span> <span class="s2">&quot;fixed_income&quot;</span><span class="p">:</span> <span class="mf">0.40</span><span class="p">},</span>
+</span><span id="__span-1-21"><a id="__codelineno-1-21" name="__codelineno-1-21" href="#__codelineno-1-21"></a>    <span class="n">liquidation_strategy</span><span class="o">=</span><span class="s2">&quot;cash_first&quot;</span>
+</span><span id="__span-1-22"><a id="__codelineno-1-22" name="__codelineno-1-22" href="#__codelineno-1-22"></a><span class="p">)</span>
+</span><span id="__span-1-23"><a id="__codelineno-1-23" name="__codelineno-1-23" href="#__codelineno-1-23"></a>
+</span><span id="__span-1-24"><a id="__codelineno-1-24" name="__codelineno-1-24" href="#__codelineno-1-24"></a><span class="n">success_constant</span> <span class="o">=</span> <span class="n">res_constant_mix</span><span class="p">[</span><span class="s2">&quot;probability_of_success&quot;</span><span class="p">][</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">*</span> <span class="mi">100</span>
+</span><span id="__span-1-25"><a id="__codelineno-1-25" name="__codelineno-1-25" href="#__codelineno-1-25"></a><span class="n">success_cash</span> <span class="o">=</span> <span class="n">res_cash_first</span><span class="p">[</span><span class="s2">&quot;probability_of_success&quot;</span><span class="p">][</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">*</span> <span class="mi">100</span>
+</span><span id="__span-1-26"><a id="__codelineno-1-26" name="__codelineno-1-26" href="#__codelineno-1-26"></a>
+</span><span id="__span-1-27"><a id="__codelineno-1-27" name="__codelineno-1-27" href="#__codelineno-1-27"></a><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Solvency Rate (Constant Mix): </span><span class="si">{</span><span class="n">success_constant</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">%&quot;</span><span class="p">)</span>
+</span><span id="__span-1-28"><a id="__codelineno-1-28" name="__codelineno-1-28" href="#__codelineno-1-28"></a><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Solvency Rate (Cash-First):   </span><span class="si">{</span><span class="n">success_cash</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">%&quot;</span><span class="p">)</span>
+</span></code></pre></div>
+<hr />
+<h3 id="example-3-swr-with-capital-gains-tax-management-fees-and-spending-guardrails">Example 3: SWR with Capital Gains Tax, Management Fees, and Spending Guardrails<a class="headerlink" href="#example-3-swr-with-capital-gains-tax-management-fees-and-spending-guardrails" title="Permanent link">&para;</a></h3>
+<p>This example simulates a highly realistic scenario incorporating a 15% capital gains tax, a 35 basis point annual asset management fee, and a dynamic spending policy that reduces withdrawals if the portfolio value falls below a specific threshold.</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">aethel</span><span class="w"> </span><span class="kn">import</span> <span class="n">SimulatorConfig</span><span class="p">,</span> <span class="n">MarketSimulator</span><span class="p">,</span> <span class="n">SimulationResults</span>
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="n">config</span> <span class="o">=</span> <span class="n">SimulatorConfig</span><span class="p">(</span><span class="n">duration_years</span><span class="o">=</span><span class="mi">30</span><span class="p">,</span> <span class="n">num_scenarios</span><span class="o">=</span><span class="mi">2000</span><span class="p">,</span> <span class="n">seed</span><span class="o">=</span><span class="mi">42</span><span class="p">)</span>
+</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="n">simulator</span> <span class="o">=</span> <span class="n">MarketSimulator</span><span class="p">(</span><span class="n">config</span><span class="p">)</span>
+</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="n">results</span> <span class="o">=</span> <span class="n">SimulationResults</span><span class="p">(</span><span class="n">simulator</span><span class="o">.</span><span class="n">run</span><span class="p">())</span>
+</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>
+</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="c1"># Define a vectorized spending guardrail rule</span>
+</span><span id="__span-2-9"><a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="k">def</span><span class="w"> </span><span class="nf">dynamic_spending_policy</span><span class="p">(</span><span class="n">balance</span><span class="p">,</span> <span class="n">cpi_factor</span><span class="p">,</span> <span class="n">step</span><span class="p">,</span> <span class="n">deposit_rate</span><span class="p">):</span>
+</span><span id="__span-2-10"><a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+</span><span id="__span-2-11"><a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a><span class="sd">    Standard monthly withdrawal is $4,000 (adjusted for inflation).</span>
+</span><span id="__span-2-12"><a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a><span class="sd">    If the portfolio balance falls below $300,000, withdrawals are reduced by 25%.</span>
+</span><span id="__span-2-13"><a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a><span class="sd">    &quot;&quot;&quot;</span>
+</span><span id="__span-2-14"><a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a>    <span class="n">baseline_withdrawal</span> <span class="o">=</span> <span class="mf">4000.0</span> <span class="o">*</span> <span class="n">cpi_factor</span>
+</span><span id="__span-2-15"><a id="__codelineno-2-15" name="__codelineno-2-15" href="#__codelineno-2-15"></a>    <span class="n">is_below_threshold</span> <span class="o">=</span> <span class="n">balance</span> <span class="o">&lt;</span> <span class="mf">300000.0</span>
+</span><span id="__span-2-16"><a id="__codelineno-2-16" name="__codelineno-2-16" href="#__codelineno-2-16"></a>    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">is_below_threshold</span><span class="p">,</span> <span class="n">baseline_withdrawal</span> <span class="o">*</span> <span class="mf">0.75</span><span class="p">,</span> <span class="n">baseline_withdrawal</span><span class="p">)</span>
+</span><span id="__span-2-17"><a id="__codelineno-2-17" name="__codelineno-2-17" href="#__codelineno-2-17"></a>
+</span><span id="__span-2-18"><a id="__codelineno-2-18" name="__codelineno-2-18" href="#__codelineno-2-18"></a><span class="c1"># Execute decumulation simulation with drag, taxes, and the policy</span>
+</span><span id="__span-2-19"><a id="__codelineno-2-19" name="__codelineno-2-19" href="#__codelineno-2-19"></a><span class="n">decum_advanced</span> <span class="o">=</span> <span class="n">results</span><span class="o">.</span><span class="n">simulate_decumulation</span><span class="p">(</span>
+</span><span id="__span-2-20"><a id="__codelineno-2-20" name="__codelineno-2-20" href="#__codelineno-2-20"></a>    <span class="n">initial_balance</span><span class="o">=</span><span class="mf">1000000.0</span><span class="p">,</span>
+</span><span id="__span-2-21"><a id="__codelineno-2-21" name="__codelineno-2-21" href="#__codelineno-2-21"></a>    <span class="n">initial_monthly_withdrawal</span><span class="o">=</span><span class="mf">4000.0</span><span class="p">,</span>
+</span><span id="__span-2-22"><a id="__codelineno-2-22" name="__codelineno-2-22" href="#__codelineno-2-22"></a>    <span class="n">portfolio_weights</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;equity&quot;</span><span class="p">:</span> <span class="mf">0.70</span><span class="p">,</span> <span class="s2">&quot;fixed_income&quot;</span><span class="p">:</span> <span class="mf">0.30</span><span class="p">},</span>
+</span><span id="__span-2-23"><a id="__codelineno-2-23" name="__codelineno-2-23" href="#__codelineno-2-23"></a>    <span class="n">liquidation_strategy</span><span class="o">=</span><span class="s2">&quot;cash_first&quot;</span><span class="p">,</span>
+</span><span id="__span-2-24"><a id="__codelineno-2-24" name="__codelineno-2-24" href="#__codelineno-2-24"></a>    <span class="n">withdrawal_timing</span><span class="o">=</span><span class="s2">&quot;beginning&quot;</span><span class="p">,</span>
+</span><span id="__span-2-25"><a id="__codelineno-2-25" name="__codelineno-2-25" href="#__codelineno-2-25"></a>    <span class="n">inflate_withdrawals</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+</span><span id="__span-2-26"><a id="__codelineno-2-26" name="__codelineno-2-26" href="#__codelineno-2-26"></a>    <span class="n">frictional_drag_annual</span><span class="o">=</span><span class="mf">0.0035</span><span class="p">,</span>   <span class="c1"># 35 bps annual drag</span>
+</span><span id="__span-2-27"><a id="__codelineno-2-27" name="__codelineno-2-27" href="#__codelineno-2-27"></a>    <span class="n">tax_on_gains_rate</span><span class="o">=</span><span class="mf">0.15</span><span class="p">,</span>          <span class="c1"># 15% capital gains tax</span>
+</span><span id="__span-2-28"><a id="__codelineno-2-28" name="__codelineno-2-28" href="#__codelineno-2-28"></a>    <span class="n">withdrawal_policy</span><span class="o">=</span><span class="n">dynamic_spending_policy</span>
+</span><span id="__span-2-29"><a id="__codelineno-2-29" name="__codelineno-2-29" href="#__codelineno-2-29"></a><span class="p">)</span>
+</span><span id="__span-2-30"><a id="__codelineno-2-30" name="__codelineno-2-30" href="#__codelineno-2-30"></a>
+</span><span id="__span-2-31"><a id="__codelineno-2-31" name="__codelineno-2-31" href="#__codelineno-2-31"></a><span class="c1"># Extract and report performance</span>
+</span><span id="__span-2-32"><a id="__codelineno-2-32" name="__codelineno-2-32" href="#__codelineno-2-32"></a><span class="n">success_rate</span> <span class="o">=</span> <span class="n">decum_advanced</span><span class="p">[</span><span class="s2">&quot;probability_of_success&quot;</span><span class="p">][</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">*</span> <span class="mi">100</span>
+</span><span id="__span-2-33"><a id="__codelineno-2-33" name="__codelineno-2-33" href="#__codelineno-2-33"></a><span class="n">final_balances</span> <span class="o">=</span> <span class="n">decum_advanced</span><span class="p">[</span><span class="s2">&quot;balances&quot;</span><span class="p">][</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="p">:]</span>
+</span><span id="__span-2-34"><a id="__codelineno-2-34" name="__codelineno-2-34" href="#__codelineno-2-34"></a><span class="n">median_surviving_balance</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">median</span><span class="p">(</span><span class="n">final_balances</span><span class="p">[</span><span class="n">final_balances</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">])</span>
+</span><span id="__span-2-35"><a id="__codelineno-2-35" name="__codelineno-2-35" href="#__codelineno-2-35"></a>
+</span><span id="__span-2-36"><a id="__codelineno-2-36" name="__codelineno-2-36" href="#__codelineno-2-36"></a><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Final Solvency Rate: </span><span class="si">{</span><span class="n">success_rate</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">%&quot;</span><span class="p">)</span>
+</span><span id="__span-2-37"><a id="__codelineno-2-37" name="__codelineno-2-37" href="#__codelineno-2-37"></a><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Median Remaining Balance (Surviving Scenarios): $</span><span class="si">{</span><span class="n">median_surviving_balance</span><span class="si">:</span><span class="s2">,.2f</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</span></code></pre></div>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.tabs", "navigation.sections", "content.code.copy", "content.code.annotate"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+        <script src="../../javascripts/mathjax.js"></script>
+      
+        <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+      
+        <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+      
+    
+  </body>
+</html>
