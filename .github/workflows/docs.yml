@@ -3,7 +3,7 @@ name: Deploy Documentation
 on:
   push:
     branches:
-      - main  # Adjust this if your default branch is named master
+      - master
 
 permissions:
   contents: write
