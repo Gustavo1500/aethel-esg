@@ -1,5 +1,11 @@
 # 🌀 Aethel: Economic Scenario Generator
 
+[![License](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/Gustavo1500/aethel-esg/blob/master/LICENSE)
+[![Python Version](https://img.shields.io/badge/python-3.9%20%7C%203.10%20%7C%203.11-blue)](https://www.python.org/)
+[![Documentation](https://img.shields.io/badge/Docs-GitHub%20Pages-blue)](https://gustavo1500.github.io/aethel-esg)
+[![Cloud API](https://img.shields.io/badge/Cloud%20API-Active-success)](https://tally.so/r/eqj5Eq)
+[![Hosted Demo](https://img.shields.io/badge/Interactive%20Demo-Vercel-success)](https://aethel-esg.vercel.app/)
+
 Aethel is an actuarial-grade Economic Scenario Generator (ESG) engine written in Python. This repository contains the open-source core library, which implements high-performance stochastic asset-liability and macroeconomic models.
 
 While the mathematical engine is open-source here for local modeling, we also provide a cloud-hosted, multi-tenant enterprise API. The SaaS infrastructure features automated usage tracking, global regional presets, and persistent state management.
