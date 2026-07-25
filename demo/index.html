@@ -3,556 +3,1017 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Aethel - Actuarial ESG Client Demo</title>
-    <!-- Tailwind CSS for layout design -->
+    <title>Aethel ESG — Interactive Actuarial Demo</title>
+    <link rel="icon" href="logo.png">
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
-        tailwind.config = {
-            darkMode: 'class',
-        }
-        // Sync theme before render to prevent flash
+        tailwind.config = { darkMode: 'class' };
         const savedTheme = localStorage.getItem('theme');
         if (savedTheme === 'dark' || (!savedTheme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
             document.documentElement.classList.add('dark');
-        } else {
-            document.documentElement.classList.remove('dark');
         }
     </script>
-    <!-- Plotly.js for client-side charting -->
     <script src="https://cdn.plot.ly/plotly-2.24.1.min.js"></script>
-    <!-- Google Fonts Inter & JetBrains Mono -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght=300;400;500;600;700&family=JetBrains+Mono:wght=400;500&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Inter', sans-serif; }
         .mono { font-family: 'JetBrains Mono', monospace; }
+        ::selection { background:#0891b2; color:#fff; }
+        ::-webkit-scrollbar { width:10px; height:10px; }
+        ::-webkit-scrollbar-thumb { background:#94a3b8; border-radius:8px; border:2px solid transparent; background-clip:content-box; }
+        .dark ::-webkit-scrollbar-thumb { background:#334155; border:2px solid transparent; background-clip:content-box; }
+
+        .hero-bg {
+            background-image:
+                radial-gradient(ellipse 60% 50% at 20% 0%, rgba(8,145,178,.14), transparent),
+                radial-gradient(ellipse 50% 40% at 85% 20%, rgba(99,102,241,.12), transparent),
+                linear-gradient(rgba(100,116,139,.07) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(100,116,139,.07) 1px, transparent 1px);
+            background-size: auto, auto, 44px 44px, 44px 44px;
+        }
+        .grad-text { background:linear-gradient(92deg,#0891b2 10%,#6366f1 60%,#0891b2 110%); -webkit-background-clip:text; background-clip:text; color:transparent; }
+
+        .reveal { opacity:0; transform:translateY(16px); transition:opacity .7s cubic-bezier(.16,1,.3,1), transform .7s cubic-bezier(.16,1,.3,1); }
+        .revealed { opacity:1; transform:none; }
+
+        input[type=range] { -webkit-appearance:none; appearance:none; height:6px; border-radius:9999px;
+            background:linear-gradient(to right,#0891b2 var(--fill,50%),#e2e8f0 var(--fill,50%)); outline:none; }
+        .dark input[type=range] { background:linear-gradient(to right,#0891b2 var(--fill,50%),#334155 var(--fill,50%)); }
+        input[type=range]::-webkit-slider-thumb { -webkit-appearance:none; width:18px; height:18px; border-radius:50%;
+            background:#fff; border:3px solid #0891b2; box-shadow:0 1px 4px rgba(0,0,0,.3); cursor:pointer; }
+        input[type=range]::-moz-range-thumb { width:18px; height:18px; border-radius:50%;
+            background:#fff; border:3px solid #0891b2; box-shadow:0 1px 4px rgba(0,0,0,.3); cursor:pointer; }
+
+        .tok-k{color:#7dd3fc}.tok-s{color:#86efac}.tok-n{color:#fbbf24}.tok-b{color:#f472b6}.tok-c{color:#22d3ee}.tok-f{color:#c084fc}
+
+        #toast { position:fixed; bottom:24px; left:50%; transform:translate(-50%,20px); opacity:0; pointer-events:none;
+            transition:all .3s cubic-bezier(.16,1,.3,1); z-index:60; }
+        #toast.show { transform:translate(-50%,0); opacity:1; }
+
+        #loader { transition:opacity .5s ease; }
+        #loader.done { opacity:0; pointer-events:none; }
+        @keyframes pulse-logo { 0%,100%{transform:scale(1);opacity:1} 50%{transform:scale(1.06);opacity:.75} }
+        .pulse-logo { animation:pulse-logo 1.6s ease-in-out infinite; }
     </style>
 </head>
-<body class="bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors duration-200">
+<body class="bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors duration-200 antialiased">
 
-    <!-- Top Banner -->
-    <header class="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 py-4 px-8 shadow-sm transition-colors duration-200">
-        <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
-            <!-- Brand Layout -->
-            <div class="flex items-center gap-4">
-                <div class="flex items-center justify-center h-12 w-auto bg-white rounded px-3 border border-slate-150 shadow-sm">
-                    <img src="logo.png" alt="Aethel Logo" class="h-10 w-auto object-contain mix-blend-multiply">
+<!-- ══════ LOADER ══════ -->
+<div id="loader" class="fixed inset-0 z-50 bg-slate-50 dark:bg-slate-950 flex flex-col items-center justify-center gap-5">
+    <img src="logo.png" alt="Aethel" class="h-16 w-auto pulse-logo" onerror="this.outerHTML='<span class=\'text-5xl pulse-logo\'>🌀</span>'">
+    <div class="text-sm font-semibold text-slate-600 dark:text-slate-300">Compiling stochastic scenario database…</div>
+    <div class="w-64 h-1.5 bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
+        <div id="load-bar" class="h-full bg-cyan-600 rounded-full transition-all duration-200" style="width:5%"></div>
+    </div>
+    <div id="load-pct" class="text-xs text-slate-400 mono">connecting…</div>
+</div>
+
+<!-- ══════ FATAL ERROR ══════ -->
+<div id="fatal-error" class="hidden fixed inset-0 z-50 bg-slate-50 dark:bg-slate-950 flex-col items-center justify-center gap-4 text-center px-6">
+    <span class="text-4xl">⚠️</span>
+    <h2 class="text-lg font-bold">Scenario database failed to load</h2>
+    <p class="text-sm text-slate-500 max-w-md">Ensure <code class="mono text-cyan-600">demo_database.json</code> sits beside this file and the page is served over HTTP (e.g. <code class="mono">python -m http.server</code>).</p>
+    <button onclick="location.reload()" class="mt-2 bg-cyan-600 hover:bg-cyan-700 text-white text-sm font-semibold px-6 py-2.5 rounded-lg">Retry</button>
+</div>
+
+<!-- ══════ HEADER ══════ -->
+<header class="sticky top-0 z-40 bg-white/80 dark:bg-slate-950/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-800">
+    <div class="max-w-7xl mx-auto flex justify-between items-center gap-4 py-3 px-4 md:px-8">
+        <div class="flex items-center gap-3">
+            <div class="relative h-10 w-10 flex items-center justify-center">
+                <span class="absolute text-2xl">🌀</span>
+                <img src="logo.png" alt="Aethel Logo" class="relative h-10 w-auto object-contain" onerror="this.style.display='none'">
+            </div>
+            <div>
+                <div class="flex items-center gap-2">
+                    <span class="text-lg font-extrabold tracking-tight">Aethel</span>
+                    <span class="bg-cyan-50 dark:bg-cyan-950/50 text-cyan-700 dark:text-cyan-400 text-[10px] font-semibold px-2 py-0.5 rounded-full border border-cyan-100 dark:border-cyan-900">ESG Suite</span>
                 </div>
-                <div class="border-l border-slate-200 dark:border-slate-700 pl-4">
-                    <div class="flex items-center gap-2">
-                        <span class="text-2xl font-bold tracking-tight text-slate-950 dark:text-white">Aethel</span>
-                        <span class="bg-cyan-50 dark:bg-cyan-950/50 text-cyan-700 dark:text-cyan-400 text-[10px] font-semibold px-2 py-0.5 rounded-full border border-cyan-100 dark:border-cyan-900">ESG Suite</span>
+                <p class="text-slate-400 text-[10px] hidden sm:block">Stochastic Economic Scenario Generator</p>
+            </div>
+        </div>
+        <nav class="hidden lg:flex items-center gap-1 text-sm font-medium text-slate-500 dark:text-slate-400">
+            <button data-nav="portfolio" class="nav-link px-3 py-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white transition-colors">Simulator</button>
+            <button data-nav="heatmap" class="nav-link px-3 py-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white transition-colors">Heatmap</button>
+            <button data-nav="macro" class="nav-link px-3 py-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white transition-colors">Macro Paths</button>
+            <button data-nav="api" class="nav-link px-3 py-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white transition-colors">API</button>
+            <a href="https://Gustavo1500.github.io/aethel-esg/" target="_blank" rel="noopener" class="px-3 py-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white transition-colors">Docs</a>
+        </nav>
+        <div class="flex items-center gap-2.5">
+            <button id="theme-toggle-btn" class="p-2.5 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" aria-label="Toggle theme"></button>
+            <a href="https://tally.so/r/eqj5Eq" target="_blank" rel="noopener"
+               class="bg-slate-900 dark:bg-cyan-600 hover:bg-cyan-700 dark:hover:bg-cyan-500 text-white font-semibold py-2.5 px-5 rounded-lg transition-colors shadow-sm text-sm whitespace-nowrap">
+                Request API Key
+            </a>
+        </div>
+    </div>
+</header>
+
+<!-- ══════ HERO ══════ -->
+<section class="hero-bg border-b border-slate-200 dark:border-slate-800">
+    <div class="max-w-7xl mx-auto px-4 md:px-8 pt-14 pb-12 text-center">
+        <div class="inline-flex items-center gap-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-full px-4 py-1.5 text-xs font-medium text-slate-500 dark:text-slate-400 shadow-sm mb-6 reveal">
+            <span class="relative flex h-2 w-2"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span><span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span></span>
+            Open-source core · Enterprise cloud API
+        </div>
+        <h1 class="text-4xl md:text-6xl font-extrabold tracking-tight leading-tight reveal">
+            Stress-test any retirement plan<br class="hidden md:block"> against <span class="grad-text" id="hero-paths">594,000</span> simulated futures.
+        </h1>
+        <p class="max-w-2xl mx-auto mt-5 text-slate-500 dark:text-slate-400 text-sm md:text-base leading-relaxed reveal">
+            Aethel is an actuarial-grade Economic Scenario Generator — Merton jump-diffusion equities, CIR short rates and
+            Ornstein-Uhlenbeck inflation, calibrated on two decades of market history. Every chart below is a live query
+            over a pre-computed stochastic database.
+        </p>
+        <div class="flex flex-wrap justify-center gap-3 mt-8 reveal">
+            <a href="https://tally.so/r/eqj5Eq" target="_blank" rel="noopener" class="bg-cyan-600 hover:bg-cyan-700 text-white font-semibold px-7 py-3 rounded-xl shadow-lg shadow-cyan-600/25 transition-all hover:-translate-y-0.5 text-sm">Request API Key Access</a>
+            <button onclick="document.getElementById('demo').scrollIntoView({behavior:'smooth'})" class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 hover:border-cyan-500 font-semibold px-7 py-3 rounded-xl transition-all hover:-translate-y-0.5 text-sm">Launch Interactive Demo ↓</button>
+            <a href="https://github.com/gustavo1500/aethel-esg" target="_blank" rel="noopener" class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 hover:border-cyan-500 font-semibold px-5 py-3 rounded-xl transition-all hover:-translate-y-0.5 text-sm">★ GitHub</a>
+        </div>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-3xl mx-auto mt-12 reveal">
+            <div class="bg-white/70 dark:bg-slate-900/70 backdrop-blur border border-slate-200 dark:border-slate-800 rounded-xl p-4">
+                <div class="text-2xl md:text-3xl font-extrabold text-cyan-600 dark:text-cyan-400 mono" id="stat-scenarios">0</div>
+                <div class="text-[11px] uppercase tracking-wider text-slate-400 mt-1">Paths / node</div>
+            </div>
+            <div class="bg-white/70 dark:bg-slate-900/70 backdrop-blur border border-slate-200 dark:border-slate-800 rounded-xl p-4">
+                <div class="text-2xl md:text-3xl font-extrabold text-cyan-600 dark:text-cyan-400 mono" id="stat-combos">0</div>
+                <div class="text-[11px] uppercase tracking-wider text-slate-400 mt-1">Scenario nodes</div>
+            </div>
+            <div class="bg-white/70 dark:bg-slate-900/70 backdrop-blur border border-slate-200 dark:border-slate-800 rounded-xl p-4">
+                <div class="text-2xl md:text-3xl font-extrabold text-cyan-600 dark:text-cyan-400 mono" id="stat-paths">0</div>
+                <div class="text-[11px] uppercase tracking-wider text-slate-400 mt-1">Retirements simulated</div>
+            </div>
+            <div class="bg-white/70 dark:bg-slate-900/70 backdrop-blur border border-slate-200 dark:border-slate-800 rounded-xl p-4">
+                <div class="text-2xl md:text-3xl font-extrabold text-cyan-600 dark:text-cyan-400 mono"><span id="stat-horizon">0</span><span class="text-base">y</span></div>
+                <div class="text-[11px] uppercase tracking-wider text-slate-400 mt-1">Projection horizon</div>
+            </div>
+        </div>
+        <div class="flex flex-wrap justify-center gap-2 mt-8 reveal">
+            <span class="text-[10px] font-semibold uppercase tracking-wider text-slate-400 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-full px-3 py-1">Merton Jump-Diffusion</span>
+            <span class="text-[10px] font-semibold uppercase tracking-wider text-slate-400 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-full px-3 py-1">Cox–Ingersoll–Ross</span>
+            <span class="text-[10px] font-semibold uppercase tracking-wider text-slate-400 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-full px-3 py-1">Ornstein–Uhlenbeck</span>
+            <span class="text-[10px] font-semibold uppercase tracking-wider text-slate-400 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-full px-3 py-1">MLE / OLS Calibration</span>
+            <span class="text-[10px] font-semibold uppercase tracking-wider text-slate-400 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-full px-3 py-1">MIT Core</span>
+        </div>
+    </div>
+</section>
+
+<!-- ══════ MAIN DEMO ══════ -->
+<main id="demo" class="max-w-7xl mx-auto p-4 md:p-8 grid grid-cols-1 lg:grid-cols-4 gap-6">
+
+    <!-- ── Sidebar ── -->
+    <section class="lg:col-span-1 bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col gap-6 h-fit lg:sticky lg:top-20">
+        <h2 class="text-base font-bold border-b border-slate-100 dark:border-slate-800 pb-3">Simulator Controls</h2>
+
+        <div>
+            <label class="block text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">Preset Environment</label>
+            <div class="bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-3 text-sm font-medium flex justify-between items-center">
+                <span>🌐 World Baseline</span>
+                <svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z"/></svg>
+            </div>
+            <span class="text-[10px] text-slate-400 mt-1 block">API key unlocks USA, Brazil, Eurozone & Japan presets.</span>
+        </div>
+
+        <div>
+            <label class="block text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">Decumulation Strategy</label>
+            <div class="grid grid-cols-2 gap-1 bg-slate-100 dark:bg-slate-800 rounded-xl p-1 border border-slate-200 dark:border-slate-700">
+                <button id="strat-btn-constant_mix" onclick="setStrategy('constant_mix')">Constant Mix</button>
+                <button id="strat-btn-cash_first_guardrail" onclick="setStrategy('cash_first_guardrail')">Guardrail</button>
+            </div>
+            <span class="text-[10px] text-slate-400 mt-1.5 block">Guardrail cuts spending 20% when assets fall below $400k.</span>
+        </div>
+
+        <div>
+            <div class="flex justify-between items-center mb-2">
+                <label class="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">CB Inflation Target</label>
+                <span id="target-val" class="text-xs font-bold text-cyan-700 dark:text-cyan-400 bg-cyan-50 dark:bg-cyan-950/40 px-2.5 py-0.5 rounded-full border border-cyan-100 dark:border-cyan-900">2%</span>
+            </div>
+            <input type="range" id="target-slider" min="2" max="6" step="2" value="2" class="w-full cursor-pointer">
+            <div id="target-labels" class="relative w-full h-5 mt-1.5"></div>
+        </div>
+
+        <div>
+            <div class="flex justify-between items-center mb-2">
+                <label class="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Monthly Withdrawal</label>
+                <span id="withdrawal-val" class="text-xs font-bold text-cyan-700 dark:text-cyan-400 bg-cyan-50 dark:bg-cyan-950/40 px-2.5 py-0.5 rounded-full border border-cyan-100 dark:border-cyan-900">$4,000</span>
+            </div>
+            <input type="range" id="withdrawal-slider" min="2000" max="12000" step="1000" value="4000" class="w-full cursor-pointer">
+            <div id="withdrawal-labels" class="relative w-full h-5 mt-1.5"></div>
+        </div>
+
+        <div>
+            <div class="flex justify-between items-center mb-2">
+                <label class="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Equity Allocation</label>
+                <span id="allocation-val" class="text-xs font-bold text-cyan-700 dark:text-cyan-400 bg-cyan-50 dark:bg-cyan-950/40 px-2.5 py-0.5 rounded-full border border-cyan-100 dark:border-cyan-900">60%</span>
+            </div>
+            <input type="range" id="allocation-slider" min="20" max="100" step="10" value="60" class="w-full cursor-pointer">
+            <div id="allocation-labels" class="relative w-full h-5 mt-1.5"></div>
+        </div>
+
+        <div class="flex flex-col gap-3 border-t border-slate-100 dark:border-slate-800 pt-4">
+            <label class="flex items-center justify-between cursor-pointer gap-2">
+                <span class="text-xs font-medium text-slate-600 dark:text-slate-300">Overlay alternate strategy</span>
+                <input type="checkbox" id="compare-toggle" class="peer sr-only" checked>
+                <div class="shrink-0 w-9 h-5 rounded-full bg-slate-300 dark:bg-slate-700 peer-checked:bg-cyan-600 relative transition-colors after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:w-4 after:h-4 after:bg-white after:rounded-full after:transition-transform peer-checked:after:translate-x-4"></div>
+            </label>
+            <label class="flex items-center justify-between cursor-pointer gap-2">
+                <span class="text-xs font-medium text-slate-600 dark:text-slate-300">Real $ (deflate by median CPI)</span>
+                <input type="checkbox" id="real-toggle" class="peer sr-only">
+                <div class="shrink-0 w-9 h-5 rounded-full bg-slate-300 dark:bg-slate-700 peer-checked:bg-cyan-600 relative transition-colors after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:w-4 after:h-4 after:bg-white after:rounded-full after:transition-transform peer-checked:after:translate-x-4"></div>
+            </label>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2 text-xs">
+            <div class="bg-slate-50 dark:bg-slate-950/50 border border-slate-200 dark:border-slate-800 rounded-lg p-2.5 flex items-center justify-between">
+                <div><div class="text-[10px] text-slate-400 uppercase">Balance</div><div class="font-bold">$1.0M</div></div>
+                <svg class="w-3 h-3 text-slate-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z"/></svg>
+            </div>
+            <div class="bg-slate-50 dark:bg-slate-950/50 border border-slate-200 dark:border-slate-800 rounded-lg p-2.5 flex items-center justify-between">
+                <div><div class="text-[10px] text-slate-400 uppercase">Horizon</div><div class="font-bold">50 yrs</div></div>
+                <svg class="w-3 h-3 text-slate-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z"/></svg>
+            </div>
+        </div>
+
+        <div class="bg-gradient-to-br from-cyan-50 to-indigo-50 dark:from-cyan-950/40 dark:to-indigo-950/40 border border-cyan-100 dark:border-cyan-900/60 rounded-xl p-4">
+            <div class="flex justify-between items-center mb-2">
+                <span class="text-[10px] font-bold uppercase tracking-wider text-cyan-700 dark:text-cyan-400">Live Scenario</span>
+                <button onclick="copyLink()" title="Copy shareable link" class="text-cyan-600 dark:text-cyan-400 hover:text-cyan-800">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m13.35-.622l1.757-1.757a4.5 4.5 0 00-6.364-6.364l-4.5 4.5a4.5 4.5 0 001.242 7.244"/></svg>
+                </button>
+            </div>
+            <p id="scenario-summary" class="text-xs text-slate-600 dark:text-slate-300 leading-relaxed"></p>
+        </div>
+    </section>
+
+    <!-- ── Dashboard ── -->
+    <section class="lg:col-span-3 flex flex-col gap-6">
+
+        <!-- KPI Cards -->
+        <div class="grid grid-cols-2 xl:grid-cols-4 gap-4">
+            <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-sm" title="Share of 1,000 simulated paths with capital remaining at year 30">
+                <div class="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">Solvency @ Yr 30</div>
+                <div id="kpi-success" class="text-3xl font-extrabold mono text-slate-900 dark:text-white">—</div>
+                <div class="text-[11px] text-slate-400 mt-1">of 1,000 paths survive</div>
+            </div>
+            <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-sm" title="Median projected portfolio value at year 30">
+                <div class="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">Median Balance @ 30y</div>
+                <div id="kpi-median" class="text-3xl font-extrabold mono text-slate-900 dark:text-white">—</div>
+                <div class="text-[11px] text-slate-400 mt-1">50th percentile outcome</div>
+            </div>
+            <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-sm" title="5th-percentile (downside) portfolio value at year 30">
+                <div class="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">Downside P5 @ 30y</div>
+                <div id="kpi-p5" class="text-3xl font-extrabold mono text-slate-900 dark:text-white">—</div>
+                <div class="text-[11px] text-slate-400 mt-1">worst 5% of paths</div>
+            </div>
+            <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-sm" title="Probability-weighted expected number of years withdrawals are fully funded">
+                <div class="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">Expected Funded Yrs</div>
+                <div id="kpi-funded" class="text-3xl font-extrabold mono text-slate-900 dark:text-white">—</div>
+                <div class="text-[11px] text-slate-400 mt-1">of 50-year horizon</div>
+            </div>
+        </div>
+
+        <!-- Tabs -->
+        <div class="flex border-b border-slate-200 dark:border-slate-800 gap-5 overflow-x-auto whitespace-nowrap">
+            <button onclick="switchTab('portfolio')" id="tab-btn-portfolio">Portfolio Decumulation</button>
+            <button onclick="switchTab('heatmap')" id="tab-btn-heatmap">Solvency Heatmap</button>
+            <button onclick="switchTab('macro')" id="tab-btn-macro">Macro Scenario Engine</button>
+            <button onclick="switchTab('methodology')" id="tab-btn-methodology">Methodology</button>
+            <button onclick="switchTab('api')" id="tab-btn-api">SaaS API Console</button>
+        </div>
+
+        <!-- TAB: Portfolio -->
+        <div id="tab-portfolio" class="grid grid-cols-1 gap-6">
+            <div class="bg-white dark:bg-slate-900 p-5 md:p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
+                <div id="chart-solvency" class="w-full h-[400px]"></div>
+            </div>
+            <div class="bg-white dark:bg-slate-900 p-5 md:p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
+                <div id="chart-balance" class="w-full h-[400px]"></div>
+            </div>
+            <div class="bg-white dark:bg-slate-900 p-5 md:p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
+                <h4 class="text-sm font-bold mb-3 flex items-center gap-2">
+                    <svg class="w-4 h-4 text-cyan-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9.75 9.75l4.5 4.5m0-4.5l-4.5 4.5M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    Engine Insights — auto-generated for this node
+                </h4>
+                <ul id="insights-list" class="text-xs text-slate-600 dark:text-slate-400 space-y-2 leading-relaxed"></ul>
+            </div>
+            <div id="card-ruin" class="hidden bg-white dark:bg-slate-900 p-5 md:p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
+                <div id="chart-ruin" class="w-full h-[340px]"></div>
+            </div>
+        </div>
+
+        <!-- TAB: Heatmap -->
+        <div id="tab-heatmap" class="hidden grid grid-cols-1 gap-6">
+            <div class="bg-white dark:bg-slate-900 p-5 md:p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
+                <div class="flex flex-col md:flex-row justify-between gap-4 mb-4">
+                    <div>
+                        <h4 class="text-sm font-bold">Solvency Surface — every node in the database</h4>
+                        <p class="text-xs text-slate-400 mt-0.5">Each cell is 1,000 fully simulated retirement paths. Click-drag to zoom.</p>
                     </div>
-                    <p class="text-slate-500 dark:text-slate-400 text-xs mt-0.5">Stochastic Economic Scenario Generator & Portfolio Decumulation Engine</p>
+                    <div class="flex flex-wrap items-center gap-3">
+                        <div class="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 rounded-lg p-1 border border-slate-200 dark:border-slate-700" id="heat-year-pills">
+                            <span class="text-[10px] font-bold text-slate-400 uppercase px-2">Year</span>
+                        </div>
+                        <div class="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 rounded-lg p-1 border border-slate-200 dark:border-slate-700">
+                            <button id="hv-a" onclick="setHeatView('a')">Constant Mix</button>
+                            <button id="hv-b" onclick="setHeatView('b')">Guardrail</button>
+                            <button id="hv-delta" onclick="setHeatView('delta')">Δ Benefit</button>
+                        </div>
+                    </div>
+                </div>
+                <div id="chart-heatmap" class="w-full h-[480px]"></div>
+                <p id="heat-insight" class="text-xs text-slate-500 dark:text-slate-400 mt-3 leading-relaxed border-t border-slate-100 dark:border-slate-800 pt-3"></p>
+            </div>
+        </div>
+
+        <!-- TAB: Macro -->
+        <div id="tab-macro" class="hidden grid grid-cols-1 gap-6">
+            <div id="card-equity" class="hidden bg-white dark:bg-slate-900 p-5 md:p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
+                <div class="flex justify-end mb-1">
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <span class="text-[11px] font-medium text-slate-500">Log scale</span>
+                        <input type="checkbox" id="log-toggle" class="peer sr-only">
+                        <div class="w-8 h-4.5 h-5 w-9 rounded-full bg-slate-300 dark:bg-slate-700 peer-checked:bg-cyan-600 relative transition-colors after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:w-4 after:h-4 after:bg-white after:rounded-full after:transition-transform peer-checked:after:translate-x-4"></div>
+                    </label>
+                </div>
+                <div id="chart-equity" class="w-full h-[400px]"></div>
+            </div>
+            <div class="bg-white dark:bg-slate-900 p-5 md:p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
+                <div id="chart-yield" class="w-full h-[360px]"></div>
+            </div>
+            <div class="bg-white dark:bg-slate-900 p-5 md:p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
+                <div id="chart-cpi" class="w-full h-[360px]"></div>
+            </div>
+        </div>
+
+        <!-- TAB: Methodology -->
+        <div id="tab-methodology" class="hidden bg-white dark:bg-slate-900 p-6 md:p-8 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
+            <h3 class="text-xl font-bold mb-3">Modeling Framework & Historical Calibration</h3>
+            <p class="text-sm text-slate-600 dark:text-slate-400 leading-relaxed mb-6">
+                Presets are calibrated on market history spanning <strong>2005 → present</strong>, capturing the 2008 GFC,
+                the QE decade, and the 2021–23 inflationary regime. Parameters are estimated via Maximum Likelihood (jump-diffusion)
+                and OLS (mean-reversion) solvers, with convergence checks before a preset is admitted.
+            </p>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-5 mb-8">
+                <div class="p-5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
+                    <span class="text-[10px] uppercase tracking-wider text-cyan-600 dark:text-cyan-400 font-bold">1 · Equities</span>
+                    <h4 class="font-bold mt-1">Merton Jump-Diffusion</h4>
+                    <p class="mono text-[11px] bg-slate-900 text-cyan-300 rounded-lg p-2.5 mt-3 overflow-x-auto">dSₜ/Sₜ = (μ−λk)dt + σdWₜ + (J−1)dNₜ</p>
+                    <p class="text-xs text-slate-500 mt-3">GBM growth plus Poisson-driven discontinuous crashes, fitted to MSCI World (URTH) total returns.</p>
+                </div>
+                <div class="p-5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
+                    <span class="text-[10px] uppercase tracking-wider text-cyan-600 dark:text-cyan-400 font-bold">2 · Short Rates</span>
+                    <h4 class="font-bold mt-1">Cox–Ingersoll–Ross</h4>
+                    <p class="mono text-[11px] bg-slate-900 text-cyan-300 rounded-lg p-2.5 mt-3 overflow-x-auto">drₜ = κ(θ−rₜ)dt + σ√rₜ dWₜ</p>
+                    <p class="text-xs text-slate-500 mt-3">Square-root diffusion keeps nominal yields non-negative; parameterized to the Effective Fed Funds Rate (FRED).</p>
+                </div>
+                <div class="p-5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
+                    <span class="text-[10px] uppercase tracking-wider text-cyan-600 dark:text-cyan-400 font-bold">3 · Inflation</span>
+                    <h4 class="font-bold mt-1">Ornstein–Uhlenbeck</h4>
+                    <p class="mono text-[11px] bg-slate-900 text-cyan-300 rounded-lg p-2.5 mt-3 overflow-x-auto">dπₜ = κ(μ<sub>π</sub>−πₜ)dt + σdWₜ</p>
+                    <p class="text-xs text-slate-500 mt-3">Mean-reverting CPI dynamics with central-bank feedback, fitted to rolling 12M YoY CPI (CPIAUCSL proxy).</p>
                 </div>
             </div>
+            <div class="border-t border-slate-100 dark:border-slate-800 pt-6 grid md:grid-cols-2 gap-6">
+                <div>
+                    <h4 class="text-sm font-bold uppercase tracking-wider mb-3">Expert Parameters (World Baseline)</h4>
+                    <ul class="text-xs text-slate-600 dark:text-slate-400 space-y-2 list-disc list-inside">
+                        <li><strong>Frictional drag:</strong> 25 bps annual portfolio fee, applied monthly.</li>
+                        <li><strong>Capital gains tax:</strong> 15% flat, computed dynamically on rebalancing & distributions.</li>
+                        <li><strong>Rate floor:</strong> short rate restricted to ≥ 0.1% to avoid invalid roots.</li>
+                        <li><strong>Reproducibility:</strong> every node seeded (seed = 42); 1,000 correlated paths each.</li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="text-sm font-bold uppercase tracking-wider mb-3">Cloud Calibration Pipeline</h4>
+                    <ol class="text-xs text-slate-600 dark:text-slate-400 space-y-2 list-decimal list-inside">
+                        <li>Upload raw historical CSVs via <code class="mono text-cyan-600">/api/v1/calibrate</code> (multipart).</li>
+                        <li>Engine runs MLE / OLS parameter estimation on cloud hardware.</li>
+                        <li>Mathematical convergence checks validate the fit.</li>
+                        <li>A bespoke regional preset JSON is returned to your tenant.</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
 
-            <!-- Controls Group -->
-            <div class="flex items-center gap-3">
-                <button onclick="toggleDarkMode()" id="theme-toggle-btn"
-                        class="p-2.5 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 dark:text-slate-400 transition-colors"
-                        aria-label="Toggle Theme Mode">
-                </button>
+        <!-- TAB: API -->
+        <div id="tab-api" class="hidden grid grid-cols-1 gap-6">
+            <div class="bg-white dark:bg-slate-900 p-6 md:p-8 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 mb-5">
+                    <div>
+                        <h3 class="text-xl font-bold">SaaS API Console</h3>
+                        <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">Payloads below regenerate live as you move the sliders.</p>
+                    </div>
+                    <span class="bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-400 text-xs font-semibold px-2.5 py-1 rounded-full border border-emerald-100 dark:border-emerald-900">● Endpoint Active</span>
+                </div>
 
-                <a href="https://tally.so/r/eqj5Eq"
-                   target="_blank"
-                   rel="noopener noreferrer"
-                   class="bg-slate-900 dark:bg-slate-800 hover:bg-cyan-700 dark:hover:bg-cyan-600 text-white font-semibold py-2.5 px-6 rounded-lg transition-colors shadow-sm text-sm">
-                    Request API Key Access
+                <div class="overflow-x-auto mb-6">
+                    <table class="w-full text-xs border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden">
+                        <thead><tr class="bg-slate-50 dark:bg-slate-950 text-slate-500 uppercase tracking-wider text-[10px]">
+                            <th class="text-left p-3 font-bold">Capability</th><th class="p-3 font-bold">This Demo</th><th class="p-3 font-bold text-cyan-600 dark:text-cyan-400">Cloud API</th>
+                        </tr></thead>
+                        <tbody class="divide-y divide-slate-100 dark:divide-slate-800 text-slate-600 dark:text-slate-400">
+                            <tr><td class="p-3">Initial balance</td><td class="p-3 text-center">$1.0M fixed</td><td class="p-3 text-center font-semibold text-slate-800 dark:text-slate-200">Any amount</td></tr>
+                            <tr><td class="p-3">Horizon & scenarios</td><td class="p-3 text-center">50y · 1,000</td><td class="p-3 text-center font-semibold text-slate-800 dark:text-slate-200">Fully configurable</td></tr>
+                            <tr><td class="p-3">Regional presets</td><td class="p-3 text-center">World only</td><td class="p-3 text-center font-semibold text-slate-800 dark:text-slate-200">USA · Brazil · Eurozone · Japan</td></tr>
+                            <tr><td class="p-3">Custom calibration (CSV upload)</td><td class="p-3 text-center">—</td><td class="p-3 text-center font-semibold text-emerald-600">✓</td></tr>
+                            <tr><td class="p-3">Tax / fee / guardrail parameters</td><td class="p-3 text-center">Fixed</td><td class="p-3 text-center font-semibold text-slate-800 dark:text-slate-200">Per-request</td></tr>
+                            <tr><td class="p-3">Usage tracking & persistent state</td><td class="p-3 text-center">—</td><td class="p-3 text-center font-semibold text-emerald-600">✓</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="flex items-center justify-between mb-3">
+                    <div class="flex gap-1 bg-slate-100 dark:bg-slate-800 rounded-lg p-1 border border-slate-200 dark:border-slate-700">
+                        <button id="lang-btn-curl" onclick="setLang('curl')">cURL</button>
+                        <button id="lang-btn-python" onclick="setLang('python')">Python</button>
+                        <button id="lang-btn-js" onclick="setLang('js')">JavaScript</button>
+                    </div>
+                    <button onclick="copyActiveCode()" class="flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-cyan-600 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1.5 transition-colors">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+                        Copy
+                    </button>
+                </div>
+                <pre id="console-curl" class="bg-slate-950 text-slate-300 p-4 rounded-xl border border-slate-800 overflow-x-auto mono text-xs leading-relaxed max-h-[420px] overflow-y-auto"></pre>
+                <pre id="console-python" class="hidden bg-slate-950 text-slate-300 p-4 rounded-xl border border-slate-800 overflow-x-auto mono text-xs leading-relaxed max-h-[420px] overflow-y-auto"></pre>
+                <pre id="console-js" class="hidden bg-slate-950 text-slate-300 p-4 rounded-xl border border-slate-800 overflow-x-auto mono text-xs leading-relaxed max-h-[420px] overflow-y-auto"></pre>
+
+                <details class="mt-4 group">
+                    <summary class="text-xs font-semibold text-slate-500 cursor-pointer hover:text-cyan-600 select-none">▸ Example response payload (illustrative)</summary>
+                    <pre class="mt-2 bg-slate-950 text-slate-400 p-4 rounded-xl border border-slate-800 overflow-x-auto mono text-xs">{
+  "status": "success",
+  "job_id": "sim_9f3K2x",
+  "compute_ms": 812,
+  "scenarios": 1000,
+  "probability_of_success": [1.0, 0.998, "…", 0.731],
+  "median_final_balance": 412880.55,
+  "percentiles": { "p5": 0, "p50": 412880.55, "p95": 3811204.19 },
+  "download_url": "https://api.aethel.com/v1/results/sim_9f3K2x.parquet"
+}</pre>
+                </details>
+
+                <a href="https://tally.so/r/eqj5Eq" target="_blank" rel="noopener" class="mt-6 inline-flex items-center gap-2 bg-cyan-600 hover:bg-cyan-700 text-white font-semibold px-6 py-3 rounded-xl shadow-lg shadow-cyan-600/25 transition-all hover:-translate-y-0.5 text-sm">
+                    Request your API key →
                 </a>
             </div>
         </div>
-    </header>
+    </section>
+</main>
 
-    <!-- Main Container -->
-    <main class="max-w-7xl mx-auto p-4 md:p-8 grid grid-cols-1 lg:grid-cols-4 gap-8">
-
-        <!-- Sidebar Controls -->
-        <section class="lg:col-span-1 bg-white dark:bg-slate-900 p-6 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col gap-6 transition-colors duration-200">
-            <h2 class="text-lg font-bold border-b border-slate-100 dark:border-slate-800 pb-3 text-slate-800 dark:text-slate-200">Simulator Controls</h2>
-
-            <!-- Preset Environment -->
+<!-- ══════ CTA BANNER ══════ -->
+<section class="max-w-7xl mx-auto px-4 md:px-8 pb-12">
+    <div class="relative overflow-hidden rounded-3xl bg-gradient-to-br from-cyan-600 via-cyan-700 to-indigo-700 p-8 md:p-12 text-white shadow-xl">
+        <div class="absolute -top-24 -right-24 w-72 h-72 bg-white/10 rounded-full blur-3xl"></div>
+        <div class="absolute -bottom-32 -left-16 w-80 h-80 bg-indigo-900/40 rounded-full blur-3xl"></div>
+        <div class="relative grid md:grid-cols-2 gap-8 items-center">
             <div>
-                <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">Preset Environment</label>
-                <div class="bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 rounded-lg p-3 text-sm font-medium">
-                    🌐 World (Merton, CIR & OU Models)
-                </div>
-                <span class="text-[10px] text-slate-400 dark:text-slate-500 mt-1 block">Your API Key unlocks regional presets like USA, Brazil, Eurozone, and Japan.</span>
+                <h2 class="text-2xl md:text-3xl font-extrabold tracking-tight">Run Aethel on your own balance sheet.</h2>
+                <p class="text-cyan-100 text-sm mt-3 leading-relaxed">This demo replays 594 pre-computed nodes. The cloud API computes <em>your</em> node — custom balances, horizons, tax regimes, regional calibrations — on demand.</p>
             </div>
-
-            <!-- Liquidation Strategy Dropdown -->
-            <div>
-                <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">Decumulation Strategy</label>
-                <select id="strategy-select" onchange="updateDashboard()"
-                        class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 rounded-lg p-3 text-sm font-medium focus:ring-2 focus:ring-cyan-500 focus:outline-none">
-                    <option value="constant_mix">Strategy A: Constant Mix (No Guardrail)</option>
-                    <option value="cash_first_guardrail">Strategy B: Cash-First + 80% Spending Guardrail</option>
-                </select>
-                <span class="text-[10px] text-slate-400 dark:text-slate-500 mt-1.5 block">Strategy B reduces withdrawals by 20% if assets fall below $400k.</span>
+            <div class="flex flex-col items-start md:items-end gap-3">
+                <a href="https://tally.so/r/eqj5Eq" target="_blank" rel="noopener" class="bg-white text-cyan-700 font-bold px-8 py-3.5 rounded-xl shadow-lg hover:-translate-y-0.5 transition-transform text-sm">Request API Key Access</a>
+                <a href="https://Gustavo1500.github.io/aethel-esg/" target="_blank" rel="noopener" class="text-cyan-100 hover:text-white text-xs font-semibold underline underline-offset-4">Read the API reference →</a>
             </div>
+        </div>
+    </div>
+</section>
 
-            <!-- Central Bank Inflation Target Slider -->
-            <div>
-                <div class="flex justify-between items-center mb-2">
-                    <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">CB Inflation Target</label>
-                    <span id="target-val" class="text-sm font-bold text-cyan-700 dark:text-cyan-400 bg-cyan-50 dark:bg-cyan-950/40 px-2.5 py-0.5 rounded-full border border-cyan-100 dark:border-cyan-900">2% Target</span>
-                </div>
-                <input type="range" id="target-slider" min="2" max="6" step="2" value="2"
-                       class="w-full h-2 bg-slate-200 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer accent-cyan-600">
-                <div id="target-labels" class="relative w-full h-5 mt-1.5"></div>
-            </div>
+<!-- ══════ FOOTER ══════ -->
+<footer class="border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
+    <div class="max-w-7xl mx-auto px-4 md:px-8 py-10 grid md:grid-cols-3 gap-8 text-sm">
+        <div>
+            <div class="flex items-center gap-2 font-extrabold">🌀 Aethel <span class="text-[10px] font-semibold text-slate-400">ESG Suite</span></div>
+            <p class="text-xs text-slate-400 mt-2 leading-relaxed">Actuarial-grade stochastic economic scenario generation. Core engine MIT-licensed; cloud infrastructure proprietary.</p>
+        </div>
+        <div>
+            <div class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3">Resources</div>
+            <ul class="space-y-2 text-xs text-slate-500">
+                <li><a class="hover:text-cyan-600" href="https://Gustavo1500.github.io/aethel-esg/" target="_blank" rel="noopener">Documentation & API Reference</a></li>
+                <li><a class="hover:text-cyan-600" href="https://github.com/gustavo1500/aethel-esg" target="_blank" rel="noopener">GitHub Repository</a></li>
+                <li><a class="hover:text-cyan-600" href="https://github.com/Gustavo1500/aethel-esg/blob/master/LICENSE" target="_blank" rel="noopener">MIT License</a></li>
+            </ul>
+        </div>
+        <div>
+            <div class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3">Enterprise</div>
+            <ul class="space-y-2 text-xs text-slate-500">
+                <li><a class="hover:text-cyan-600" href="https://tally.so/r/eqj5Eq" target="_blank" rel="noopener">Request API Key</a></li>
+                <li><span class="inline-flex items-center gap-1.5"><span class="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>Cloud API operational — Render + Neon</span></li>
+            </ul>
+        </div>
+    </div>
+    <div class="border-t border-slate-100 dark:border-slate-800 py-4 text-center text-[11px] text-slate-400">
+        © <span id="year"></span> Aethel ESG · Demo served from a pre-computed scenario database (seed 42)
+    </div>
+</footer>
 
-            <!-- Monthly Withdrawal Slider -->
-            <div>
-                <div class="flex justify-between items-center mb-2">
-                    <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Monthly Withdrawal</label>
-                    <span id="withdrawal-val" class="text-sm font-bold text-cyan-700 dark:text-cyan-400 bg-cyan-50 dark:bg-cyan-950/40 px-2.5 py-0.5 rounded-full border border-cyan-100 dark:border-cyan-900">$4,000 / mo</span>
-                </div>
-                <input type="range" id="withdrawal-slider" min="2000" max="12000" step="1000" value="4000"
-                       class="w-full h-2 bg-slate-200 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer accent-cyan-600">
-                <div id="withdrawal-labels" class="relative w-full h-5 mt-1.5"></div>
-            </div>
+<div id="toast" class="bg-slate-900 dark:bg-white text-white dark:text-slate-900 text-xs font-semibold px-4 py-2.5 rounded-lg shadow-xl"></div>
 
-            <!-- Equity Allocation Slider -->
-            <div>
-                <div class="flex justify-between items-center mb-2">
-                    <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Equity Allocation</label>
-                    <span id="allocation-val" class="text-sm font-bold text-cyan-700 dark:text-cyan-400 bg-cyan-50 dark:bg-cyan-950/40 px-2.5 py-0.5 rounded-full border border-cyan-100 dark:border-cyan-900">60% Equity</span>
-                </div>
-                <input type="range" id="allocation-slider" min="20" max="100" step="10" value="60"
-                       class="w-full h-2 bg-slate-200 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer accent-cyan-600">
-                <div id="allocation-labels" class="relative w-full h-5 mt-1.5"></div>
-            </div>
+<script>
+/* ═══════════════ STATE ═══════════════ */
+let demoDb = null, timeline = [], HORIZON = 50, N_SCEN = 1000;
+let WDS = [2000,3000,4000,5000,6000,7000,8000,9000,10000,11000,12000];
+let ALLOCS = [20,30,40,50,60,70,80,90,100];
+const state = { target:2, withdrawal:4000, allocation:60, strategy:'cash_first_guardrail',
+                compare:true, real:false, logEquity:false, tab:'portfolio', heatYear:30, heatView:'delta', lang:'curl' };
 
-            <div class="bg-slate-50 dark:bg-slate-950/40 border border-slate-150 dark:border-slate-800 rounded-lg p-4 text-xs text-slate-500 dark:text-slate-400 leading-relaxed mt-4 transition-colors duration-200">
-                <strong>Pre-Calculated Showcase:</strong> Locked to a standard 50-year planning horizon. Check the <strong>SaaS API Console</strong> tab to generate custom dynamic queries.
-            </div>
-        </section>
+const el = id => document.getElementById(id);
+const PLOT_CONFIG = { responsive:true, displaylogo:false, modeBarButtonsToRemove:['select2d','lasso2d'],
+    toImageButtonOptions:{format:'png', filename:'aethel_chart', width:1100, height:620, scale:2} };
 
-        <!-- Charts Dashboard Panel -->
-        <section class="lg:col-span-3 flex flex-col gap-8">
+/* ═══════════════ INIT ═══════════════ */
+async function init() {
+    try {
+        demoDb = await loadDb();
+        const m = demoDb.metadata || {};
+        HORIZON = m.horizon_years || 50; N_SCEN = m.scenarios || 1000;
+        if (m.withdrawals) WDS = m.withdrawals;
+        if (m.allocations) ALLOCS = m.allocations;
+        timeline = demoDb.economic_data['target_2'].timeline;
 
-            <!-- Tab Headers -->
-            <div class="flex border-b border-slate-200 dark:border-slate-800 gap-6 overflow-x-auto whitespace-nowrap">
-                <button onclick="switchTab('portfolio')" id="tab-btn-portfolio" class="border-b-2 border-cyan-600 pb-3 text-sm font-semibold text-cyan-700 px-1 transition-all">Portfolio Decumulation</button>
-                <button onclick="switchTab('macro')" id="tab-btn-macro" class="border-b-2 border-transparent pb-3 text-sm font-medium text-slate-500 hover:text-slate-800 px-1 transition-all">Underlying Rates & Inflation</button>
-                <button onclick="switchTab('methodology')" id="tab-btn-methodology" class="border-b-2 border-transparent pb-3 text-sm font-medium text-slate-500 hover:text-slate-800 px-1 transition-all">Methodology & Calibration</button>
-                <button onclick="switchTab('api')" id="tab-btn-api" class="border-b-2 border-transparent pb-3 text-sm font-medium text-slate-500 hover:text-slate-800 px-1 transition-all">SaaS API Console</button>
-            </div>
-
-            <!-- Tab 1: Portfolio View -->
-            <div id="tab-portfolio" class="grid grid-cols-1 gap-8">
-                <div class="bg-white dark:bg-slate-900 p-6 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm transition-colors duration-200">
-                    <div id="chart-solvency" class="w-full h-[400px]"></div>
-                </div>
-                <div class="bg-white dark:bg-slate-900 p-6 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm transition-colors duration-200">
-                    <div id="chart-balance" class="w-full h-[400px]"></div>
-                </div>
-            </div>
-
-            <!-- Tab 2: Macroeconomic View -->
-            <div id="tab-macro" class="hidden grid grid-cols-1 gap-8">
-                <div class="bg-white dark:bg-slate-900 p-6 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm transition-colors duration-200">
-                    <div id="chart-yield" class="w-full h-[350px]"></div>
-                </div>
-                <div class="bg-white dark:bg-slate-900 p-6 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm transition-colors duration-200">
-                    <div id="chart-cpi" class="w-full h-[350px]"></div>
-                </div>
-            </div>
-
-            <!-- Tab 3: Methodology -->
-            <div id="tab-methodology" class="hidden bg-white dark:bg-slate-900 p-8 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm transition-colors duration-200">
-                <h3 class="text-xl font-bold text-slate-900 dark:text-white mb-4">Historical Calibration & Modeling Framework</h3>
-                <p class="text-sm text-slate-600 dark:text-slate-400 leading-relaxed mb-6">
-                    Aethel’s economic presets are calibrated on historical data spanning <strong>2005 to the present</strong>. This timeframe captures distinct macroeconomic cycles, including the 2008 Global Financial Crisis, the post-crisis quantitative easing cycle, and the global inflationary spikes of 2021–2023.
-                </p>
-
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                    <div class="p-4 rounded-lg bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
-                        <span class="text-xs uppercase tracking-wider text-cyan-600 dark:text-cyan-400 font-bold">1. Equities Model</span>
-                        <h4 class="text-md font-bold mt-1 text-slate-800 dark:text-slate-100">Merton Jump-Diffusion</h4>
-                        <p class="text-xs text-slate-500 mt-2">Modeled via log-return transitions utilizing global benchmarks (MSCI World ETF / URTH). Automatically accounts for splits, dividends, and sudden discontinuous downward asset price jumps.</p>
-                    </div>
-                    <div class="p-4 rounded-lg bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
-                        <span class="text-xs uppercase tracking-wider text-cyan-600 dark:text-cyan-400 font-bold">2. Interest Rate Model</span>
-                        <h4 class="text-md font-bold mt-1 text-slate-800 dark:text-slate-100">Cox-Ingersoll-Ross (CIR)</h4>
-                        <p class="text-xs text-slate-500 mt-2">Mathematical short-rate model parameterized to the <strong>Effective Federal Funds Rate (FRED)</strong> as a global risk-free rate proxy, utilizing a square-root process (&sigma;&radic;r<sub>t</sub>) to enforce non-negative nominal yields.</p>
-                    </div>
-                    <div class="p-4 rounded-lg bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
-                        <span class="text-xs uppercase tracking-wider text-cyan-600 dark:text-cyan-400 font-bold">3. Inflation Model</span>
-                        <h4 class="text-md font-bold mt-1 text-slate-800 dark:text-slate-100">Ornstein-Uhlenbeck</h4>
-                        <p class="text-xs text-slate-500 mt-2">Mean-reverting stochastic model fitted directly to the rolling 12-Month Year-on-Year change of the G7 CPI baseline index (CPIAUCSL proxy).</p>
-                    </div>
-                </div>
-
-                <div class="border-t border-slate-100 dark:border-slate-800 pt-6">
-                    <h4 class="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider mb-3">Expert Parameters (World Baseline)</h4>
-                    <ul class="text-xs text-slate-600 dark:text-slate-400 space-y-2 list-disc list-inside">
-                        <li><strong>Annualized Frictional Drag:</strong> 25 bps portfolio-wide maintenance fees applied monthly.</li>
-                        <li><strong>Capital Gains Taxation:</strong> 15% flat rate on gains, calculated dynamically during portfolio rebalancing and distributions.</li>
-                        <li><strong>Rate & Deflation Floors:</strong> Short-rate proxy restricted to &ge; 0.1% to prevent mathematically invalid negative roots.</li>
-                    </ul>
-                </div>
-            </div>
-
-            <!-- Tab 4: API Console -->
-            <div id="tab-api" class="hidden bg-white dark:bg-slate-900 p-8 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm transition-colors duration-200">
-                <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
-                    <div>
-                        <h3 class="text-xl font-bold text-slate-900 dark:text-white">Active SaaS API Console</h3>
-                        <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">Generate dynamic queries matching your exact slider variables on the fly.</p>
-                    </div>
-                    <span class="bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-400 text-xs font-semibold px-2.5 py-1 rounded-full border border-emerald-100 dark:border-emerald-900">API Endpoint: Active</span>
-                </div>
-
-                <div class="bg-slate-50 dark:bg-slate-950 p-4 rounded-lg border border-slate-200 dark:border-slate-800 text-xs text-slate-600 dark:text-slate-400 mb-6">
-                    <strong>Enterprise Dynamic Capabilities:</strong> The underlying cloud-hosted API supports variable initial balances (e.g. $750k, $5.0M), customized tax environments, unique advisor fee structures, dynamic withdrawal strategies, and bespoke parameter adjustments via the <code>/api/v1/calibrate</code> multipart endpoint.
-                </div>
-
-                <div class="flex flex-col gap-6">
-                    <div>
-                        <span class="block text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2">cURL Request</span>
-                        <pre class="bg-slate-950 text-slate-300 p-4 rounded-lg border border-slate-850 overflow-x-auto mono text-xs" id="console-curl"></pre>
-                    </div>
-                    <div>
-                        <span class="block text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2">Python Implementation</span>
-                        <pre class="bg-slate-950 text-slate-300 p-4 rounded-lg border border-slate-850 overflow-x-auto mono text-xs" id="console-python"></pre>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-    </main>
-
-    <!-- Core Interactive Client-Side logic -->
-    <script>
-        let demoDb = null;
-
-        async function init() {
-            try {
-                const response = await fetch('demo_database.json');
-                demoDb = await response.json();
-
-                setupSymmetricLabels('target-slider', 'target-labels', [2, 4, 6], '%');
-                setupSymmetricLabels('withdrawal-slider', 'withdrawal-labels', [2000, 4000, 6000, 8000, 10000, 12000], '', '$');
-                setupSymmetricLabels('allocation-slider', 'allocation-labels', [20, 40, 60, 80, 100], '%');
-
-                updateThemeButton();
-
-                document.getElementById('target-slider').addEventListener('input', updateDashboard);
-                document.getElementById('withdrawal-slider').addEventListener('input', updateDashboard);
-                document.getElementById('allocation-slider').addEventListener('input', updateDashboard);
-
-                updateDashboard();
-            } catch (err) {
-                console.error("Failed to load demo_database.json:", err);
-                alert("Error: Database file could not be loaded. Please ensure 'demo_database.json' is in the same directory.");
-            }
-        }
-
-        function setupSymmetricLabels(sliderId, containerId, labelsArray, suffix = '', prefix = '') {
-            const slider = document.getElementById(sliderId);
-            const container = document.getElementById(containerId);
-            container.innerHTML = '';
-
-            const min = parseFloat(slider.min);
-            const max = parseFloat(slider.max);
-
-            labelsArray.forEach((val, i) => {
-                const pct = ((val - min) / (max - min)) * 100;
-                const span = document.createElement('span');
-                span.className = 'absolute text-[10px] text-slate-400 dark:text-slate-500 font-semibold';
-
-                let text = val;
-                if (prefix === '$') {
-                    text = `$${(val / 1000).toFixed(0)}k`;
-                } else {
-                    text = `${val}${suffix}`;
-                }
-                span.innerText = text;
-
-                if (i === 0) {
-                    span.style.left = '0%';
-                } else if (i === labelsArray.length - 1) {
-                    span.style.right = '0%';
-                } else {
-                    span.style.left = `${pct}%`;
-                    span.style.transform = 'translateX(-50%)';
-                }
-                container.appendChild(span);
-            });
-        }
-
-        // Toggle Theme logic
-        function toggleDarkMode() {
-            const isDark = document.documentElement.classList.toggle('dark');
-            localStorage.setItem('theme', isDark ? 'dark' : 'light');
-            updateThemeButton();
-            updateDashboard();
-        }
-
-        function updateThemeButton() {
-            const isDark = document.documentElement.classList.contains('dark');
-            const btn = document.getElementById('theme-toggle-btn');
-
-            if (isDark) {
-                btn.innerHTML = `
-                    <svg class="w-5 h-5 text-yellow-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707m0-11.314l.707.707m11.314 11.314l.707-.707M12 8a4 4 0 100 8 4 4 0 000-8z" />
-                    </svg>
-                `;
-            } else {
-                btn.innerHTML = `
-                    <svg class="w-5 h-5 text-slate-700" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
-                    </svg>
-                `;
-            }
-        }
-
-        // Update Charts and Metric card
-        function updateDashboard() {
-            if (!demoDb) return;
-
-            const targetPct = parseInt(document.getElementById('target-slider').value);
-            const withdrawal = parseInt(document.getElementById('withdrawal-slider').value);
-            const allocation = parseInt(document.getElementById('allocation-slider').value);
-            const strategy = document.getElementById('strategy-select').value;
-
-            document.getElementById('target-val').innerText = `${targetPct}% Target`;
-            document.getElementById('withdrawal-val').innerText = `$${withdrawal.toLocaleString('en-US')} / mo`;
-            document.getElementById('allocation-val').innerText = `${allocation}% Equity`;
-
-            const comboKey = `${withdrawal}w_${allocation}a_${strategy}_${targetPct}t`;
-            const decumData = demoDb.decumulation_data[comboKey];
-            const macroData = demoDb.economic_data[`target_${targetPct}`];
-
-            if (!decumData || !macroData) {
-                console.warn(`Data key missing: ${comboKey}`);
-                return;
-            }
-
-            const yearsTimeline = macroData.timeline;
-
-            const isDark = document.documentElement.classList.contains('dark');
-            const themeTemplate = isDark ? 'plotly_dark' : 'plotly_white';
-            const cardBgColor = isDark ? '#0f172a' : '#ffffff';
-            const gridColor = isDark ? '#1e293b' : '#f1f5f9';
-            const textColor = isDark ? '#94a3b8' : '#475569';
-            const titleColor = isDark ? '#f8fafc' : '#0f172a';
-
-            // 1. Plot Solvency Curve
-            const solvencyTrace = {
-                x: yearsTimeline,
-                y: decumData.solvency.map(val => val * 100),
-                mode: 'lines',
-                line: {color: '#0891b2', width: 3},
-                name: 'Solvency Probability'
-            };
-            Plotly.react('chart-solvency', [solvencyTrace], {
-                title: {text: 'Portfolio Solvency (Survival) Probability (50-Year Horizon)', font: {size: 15, color: titleColor, family: 'Inter, sans-serif', weight: 'bold'}},
-                xaxis: {
-                    title: {text: 'Retirement Horizon (Years)', font: {color: textColor, size: 12}},
-                    tickfont: {color: textColor, size: 10},
-                    gridcolor: gridColor,
-                    linecolor: gridColor
-                },
-                yaxis: {
-                    title: {text: 'Solvency Rate (%)', font: {color: textColor, size: 12}},
-                    tickfont: {color: textColor, size: 10},
-                    range: [-2, 105],
-                    ticksuffix: '%',
-                    gridcolor: gridColor,
-                    linecolor: gridColor
-                },
-                template: themeTemplate,
-                paper_bgcolor: cardBgColor,
-                plot_bgcolor: cardBgColor,
-                margin: {t: 60, b: 60, l: 60, r: 20}
-            }, {responsive: true});
-
-            // 2. Plot Balance path
-            const nestEggP5 = {
-                x: yearsTimeline,
-                y: decumData.balance_p5,
-                line: {width: 0},
-                showlegend: false,
-                hoverinfo: 'skip'
-            };
-            const nestEggP95 = {
-                x: yearsTimeline,
-                y: decumData.balance_p95,
-                fill: 'tonexty',
-                fillcolor: isDark ? 'rgba(8, 145, 178, 0.15)' : 'rgba(8, 145, 178, 0.08)',
-                line: {width: 0},
-                name: '5% - 95% Interval'
-            };
-            const nestEggP50 = {
-                x: yearsTimeline,
-                y: decumData.balance_p50,
-                mode: 'lines',
-                line: {color: '#0891b2', width: 3},
-                name: 'Median Balance (P50)'
-            };
-
-            Plotly.react('chart-balance', [nestEggP5, nestEggP95, nestEggP50], {
-                title: {text: 'Real Nest Egg Depletion Risk Paths ($1.0M Initial)', font: {size: 15, color: titleColor, family: 'Inter, sans-serif', weight: 'bold'}},
-                xaxis: {
-                    title: {text: 'Retirement Horizon (Years)', font: {color: textColor, size: 12}},
-                    tickfont: {color: textColor, size: 10},
-                    gridcolor: gridColor,
-                    linecolor: gridColor
-                },
-                yaxis: {
-                    title: {text: 'Portfolio Value ($)', font: {color: textColor, size: 12}},
-                    tickfont: {color: textColor, size: 10},
-                    tickprefix: '$',
-                    gridcolor: gridColor,
-                    linecolor: gridColor
-                },
-                template: themeTemplate,
-                paper_bgcolor: cardBgColor,
-                plot_bgcolor: cardBgColor,
-                margin: {t: 60, b: 80, l: 75, r: 20},
-                legend: {
-                    font: {color: textColor, size: 11},
-                    orientation: 'h',
-                    y: -0.25,
-                    x: 0.5,
-                    xanchor: 'center'
-                }
-            }, {responsive: true});
-
-            // 3. Plot Yield Projections (Nominal Short Rate Projections)
-            let yieldData = {...macroData.yield};
-            const needsScale = Math.max(...yieldData.p50) < 1.0;
-            if (needsScale) {
-                yieldData.p5 = yieldData.p5.map(x => x * 100);
-                yieldData.p50 = yieldData.p50.map(x => x * 100);
-                yieldData.p95 = yieldData.p95.map(x => x * 100);
-            }
-            plotMacroFanChart('chart-yield', yieldData, yearsTimeline, 'Nominal Short-Term Yield Projections', 'Yield (%)', true, themeTemplate, cardBgColor, gridColor, textColor, titleColor, isDark);
-
-            // 4. Plot CPI inflation Index
-            plotMacroFanChart('chart-cpi', macroData.cpi, yearsTimeline, 'Cumulative CPI Projections ($1.0 base)', 'Index Value', false, themeTemplate, cardBgColor, gridColor, textColor, titleColor, isDark);
-
-            // Update SaaS Console Outputs
-            updateApiConsole(withdrawal, allocation, strategy, targetPct);
-        }
-
-        function plotMacroFanChart(elementId, dataset, yearsTimeline, title, yLabel, isPercentage, themeTemplate, cardBgColor, gridColor, textColor, titleColor, isDark) {
-            const t5 = {x: yearsTimeline, y: dataset.p5, line: {width: 0}, showlegend: false, hoverinfo: 'skip'};
-            const t95 = {
-                x: yearsTimeline, y: dataset.p95, fill: 'tonexty',
-                fillcolor: isDark ? 'rgba(8, 145, 178, 0.15)' : 'rgba(8, 145, 178, 0.08)',
-                line: {width: 0}, name: '5% - 95% Interval'
-            };
-            const t50 = {
-                x: yearsTimeline, y: dataset.p50, mode: 'lines',
-                line: {color: isDark ? '#ffffff' : '#0f172a', width: 2.5}, name: 'Median Projection'
-            };
-
-            Plotly.react(elementId, [t5, t95, t50], {
-                title: {text: title, font: {size: 15, color: titleColor, family: 'Inter, sans-serif', weight: 'bold'}},
-                xaxis: {
-                    title: {text: 'Time Horizon (Years)', font: {color: textColor, size: 12}},
-                    tickfont: {color: textColor, size: 10},
-                    gridcolor: gridColor,
-                    linecolor: gridColor
-                },
-                yaxis: {
-                    title: {text: yLabel, font: {color: textColor, size: 12}},
-                    tickfont: {color: textColor, size: 10},
-                    gridcolor: gridColor,
-                    linecolor: gridColor,
-                    ticksuffix: isPercentage ? '%' : ''
-                },
-                template: themeTemplate,
-                paper_bgcolor: cardBgColor,
-                plot_bgcolor: cardBgColor,
-                margin: {t: 60, b: 80, l: 60, r: 20},
-                legend: {
-                    font: {color: textColor, size: 11},
-                    orientation: 'h',
-                    y: -0.25,
-                    x: 0.5,
-                    xanchor: 'center'
-                }
-            }, {responsive: true});
-        }
-
-        function updateApiConsole(withdrawal, allocation, strategy, targetPct) {
-            const isGuardrail = strategy === 'cash_first_guardrail';
-            const weights = {
-                equity: allocation / 100,
-                fixed_income: roundVal((100 - allocation) / 100, 2)
-            };
-
-            const payload = {
-                preset: "world",
-                num_scenarios: 1000,
-                duration_years: 50,
-                ou_mu: targetPct / 100,
-                initial_balance: 1000000.0,
-                initial_monthly_withdrawal: withdrawal,
-                portfolio_weights: weights,
-                liquidation_strategy: isGuardrail ? "cash_first" : "constant_mix",
-                frictional_drag_annual: 0.0025,
-                tax_on_gains_rate: 0.15
-            };
-
-            if (isGuardrail) {
-                payload.spending_guardrail = {
-                    enabled: true,
-                    floor_balance_threshold: 400000.0,
-                    reduction_factor: 0.80
-                };
-            }
-
-            const curlCode = `curl -X POST "https://api.aethel.com/api/v1/decumulation" \\
-  -H "Content-Type: application/json" \\
-  -H "X-API-Key: YOUR_API_KEY" \\
-  -d '${JSON.stringify(payload, null, 2)}'`;
-
-            const pythonCode = `import requests
-
-url = "https://api.aethel.com/api/v1/decumulation"
-headers = {
-    "Content-Type": "application/json",
-    "X-API-Key": "YOUR_API_KEY"
+        applyHash();
+        buildControls();
+        bindEvents();
+        updateAll();
+        animateHeroStats();
+        el('year').textContent = new Date().getFullYear();
+        el('loader').classList.add('done');
+        setTimeout(()=>el('loader').remove(), 600);
+        initReveal();
+    } catch (err) {
+        console.error(err);
+        el('loader').classList.add('hidden');
+        el('fatal-error').classList.remove('hidden');
+        el('fatal-error').classList.add('flex');
+    }
 }
-payload = ${JSON.stringify(payload, null, 4)}
 
-response = requests.post(url, json=payload, headers=headers)
-data = response.json()
-print("Success Probability:", data["probability_of_success"][-1])`;
+async function loadDb() {
+    const res = await fetch('demo_database.json');
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const len = +(res.headers.get('content-length') || 0);
+    if (!res.body || !len) { el('load-bar').style.width='80%'; return res.json(); }
+    const reader = res.body.getReader(); const chunks = []; let got = 0;
+    while (true) {
+        const {done, value} = await reader.read();
+        if (done) break;
+        chunks.push(value); got += value.length;
+        const pct = Math.round(got/len*100);
+        el('load-bar').style.width = pct + '%';
+        el('load-pct').textContent = pct + '% · ' + (got/1048576).toFixed(1) + ' MB';
+    }
+    el('load-pct').textContent = 'parsing…';
+    return JSON.parse(new TextDecoder().decode(concatChunks(chunks, got)));
+}
+function concatChunks(chunks, total) {
+    const out = new Uint8Array(total); let off = 0;
+    for (const c of chunks) { out.set(c, off); off += c.length; }
+    return out;
+}
 
-            document.getElementById('console-curl').textContent = curlCode;
-            document.getElementById('console-python').textContent = pythonCode;
-        }
+function buildControls() {
+    setupSliderLabels('target-slider','target-labels',[2,4,6],'%');
+    setupSliderLabels('withdrawal-slider','withdrawal-labels',WDS.filter((_,i)=>i%2===0),'','$');
+    setupSliderLabels('allocation-slider','allocation-labels',[20,40,60,80,100],'%');
+    el('target-slider').value = state.target;
+    el('withdrawal-slider').value = state.withdrawal;
+    el('allocation-slider').value = state.allocation;
+    el('compare-toggle').checked = state.compare;
+    el('real-toggle').checked = state.real;
+    const pills = el('heat-year-pills');
+    [10,20,30,40,50].forEach(y => {
+        const b = document.createElement('button');
+        b.id = 'hy-' + y; b.textContent = y; b.onclick = () => setHeatYear(y);
+        pills.appendChild(b);
+    });
+    updateThemeButton();
+}
 
-        function roundVal(num, decimals) {
-            return parseFloat(num.toFixed(decimals));
-        }
+function bindEvents() {
+    el('target-slider').addEventListener('input', e => { state.target = +e.target.value; updateAll(); });
+    el('withdrawal-slider').addEventListener('input', e => { state.withdrawal = +e.target.value; updateAll(); });
+    el('allocation-slider').addEventListener('input', e => { state.allocation = +e.target.value; updateAll(); });
+    el('compare-toggle').addEventListener('change', e => { state.compare = e.target.checked; updateAll(); });
+    el('real-toggle').addEventListener('change', e => { state.real = e.target.checked; updateAll(); });
+    el('log-toggle').addEventListener('change', e => { state.logEquity = e.target.checked; renderMacro(currentMacro()); });
+    el('theme-toggle-btn').addEventListener('click', toggleDarkMode);
+    document.querySelectorAll('.nav-link').forEach(b => b.addEventListener('click', () => {
+        switchTab(b.dataset.nav);
+        el('demo').scrollIntoView({behavior:'smooth'});
+    }));
+}
 
-        function switchTab(tabName) {
-            const tabs = ['portfolio', 'macro', 'methodology', 'api'];
-            tabs.forEach(t => {
-                const element = document.getElementById(`tab-${t}`);
-                const btn = document.getElementById(`tab-btn-${t}`);
-                const isActive = t === tabName;
+function setupSliderLabels(sliderId, containerId, labels, suffix='', prefix='') {
+    const s = el(sliderId), c = el(containerId); c.innerHTML = '';
+    const min = +s.min, max = +s.max;
+    labels.forEach((v,i) => {
+        const span = document.createElement('span');
+        span.className = 'absolute text-[10px] text-slate-400 font-semibold';
+        span.textContent = prefix === '$' ? '$' + (v/1000).toFixed(0) + 'k' : v + suffix;
+        if (i === 0) span.style.left = '0%';
+        else if (i === labels.length-1) span.style.right = '0%';
+        else { span.style.left = ((v-min)/(max-min)*100) + '%'; span.style.transform = 'translateX(-50%)'; }
+        c.appendChild(span);
+    });
+}
 
-                if (isActive) {
-                    element.classList.remove('hidden');
-                    btn.className = "border-b-2 border-cyan-600 pb-3 text-sm font-semibold text-cyan-700 dark:text-cyan-400 px-1 transition-all";
-                } else {
-                    element.classList.add('hidden');
-                    btn.className = "border-b-2 border-transparent pb-3 text-sm font-medium text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 px-1 transition-all";
-                }
-            });
-            window.dispatchEvent(new Event('resize'));
-        }
+/* ═══════════════ HASH / SHARE ═══════════════ */
+function applyHash() {
+    if (!location.hash) return;
+    const p = new URLSearchParams(location.hash.slice(1));
+    if (p.get('w') && WDS.includes(+p.get('w'))) state.withdrawal = +p.get('w');
+    if (p.get('a') && ALLOCS.includes(+p.get('a'))) state.allocation = +p.get('a');
+    if (p.get('t') && [2,4,6].includes(+p.get('t'))) state.target = +p.get('t');
+    if (['constant_mix','cash_first_guardrail'].includes(p.get('s'))) state.strategy = p.get('s');
+    if (['portfolio','heatmap','macro','methodology','api'].includes(p.get('tab'))) state.tab = p.get('tab');
+}
+function syncHash() {
+    const p = new URLSearchParams({w:state.withdrawal, a:state.allocation, t:state.target, s:state.strategy, tab:state.tab});
+    history.replaceState(null, '', '#' + p.toString());
+}
+function copyLink() { copyText(location.href); toast('Scenario link copied — share it!'); }
 
-        init();
-    </script>
+/* ═══════════════ HELPERS ═══════════════ */
+const comboKey = (w,a,s,t) => `${w}w_${a}a_${s}_${t}t`;
+const getDecum = (w,a,s,t) => demoDb.decumulation_data[comboKey(w,a,s,t)];
+const currentDecum = () => getDecum(state.withdrawal, state.allocation, state.strategy, state.target);
+const currentMacro = () => demoDb.economic_data['target_' + state.target];
+const otherStrategy = () => state.strategy === 'constant_mix' ? 'cash_first_guardrail' : 'constant_mix';
+const stratName = s => s === 'constant_mix' ? 'Constant Mix' : 'Guardrail';
+const roundVal = (n,d) => parseFloat(n.toFixed(d));
+function idxAt(year) { let best=0, bd=1e9; timeline.forEach((v,i)=>{ const d=Math.abs(v-year); if(d<bd){bd=d;best=i;} }); return best; }
+function expectedFundedYears(sol) { const dt = timeline[1]-timeline[0]; return Math.min(sol.reduce((a,p)=>a+p*dt,0), HORIZON); }
+const fmtMoney = v => Math.abs(v) >= 1e6 ? '$'+(v/1e6).toFixed(2)+'M' : Math.abs(v) >= 1e3 ? '$'+Math.round(v/1e3)+'k' : '$'+Math.round(v);
+const fmtPct = v => v.toFixed(1)+'%';
+
+function animateNum(elm, to, fmt, dur=400) {
+    const from = elm._v ?? to; elm._v = to;
+    if (from === to) { elm.textContent = fmt(to); return; }
+    const t0 = performance.now();
+    (function step(t) {
+        const k = Math.min(1,(t-t0)/dur), e = 1-Math.pow(1-k,3);
+        elm.textContent = fmt(from+(to-from)*e);
+        if (k<1) requestAnimationFrame(step);
+    })(t0);
+}
+function animateHeroStats() {
+    const combos = WDS.length * ALLOCS.length * 2 * 3;
+    animateNum(el('stat-scenarios'), N_SCEN, v=>Math.round(v).toLocaleString(), 1200);
+    animateNum(el('stat-combos'), combos, v=>Math.round(v).toLocaleString(), 1200);
+    animateNum(el('stat-paths'), combos*N_SCEN, v=>Math.round(v).toLocaleString(), 1400);
+    animateNum(el('stat-horizon'), HORIZON, v=>Math.round(v), 1000);
+}
+
+function toggleDarkMode() {
+    const isDark = document.documentElement.classList.toggle('dark');
+    localStorage.setItem('theme', isDark ? 'dark' : 'light');
+    updateThemeButton(); renderActiveTab();
+}
+function updateThemeButton() {
+    const isDark = document.documentElement.classList.contains('dark');
+    el('theme-toggle-btn').innerHTML = isDark
+        ? '<svg class="w-5 h-5 text-yellow-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707m0-11.314l.707.707m11.314 11.314l.707-.707M12 8a4 4 0 100 8 4 4 0 000-8z"/></svg>'
+        : '<svg class="w-5 h-5 text-slate-700" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/></svg>';
+}
+
+/* ═══════════════ CHART THEME ═══════════════ */
+function T() {
+    const isDark = document.documentElement.classList.contains('dark');
+    return { isDark, template: isDark?'plotly_dark':'plotly_white', bg: isDark?'#0f172a':'#ffffff',
+        grid: isDark?'#1e293b':'#eef2f7', text: isDark?'#94a3b8':'#64748b', title: isDark?'#f1f5f9':'#0f172a',
+        cyan: isDark?'#22d3ee':'#0891b2', amber: isDark?'#fbbf24':'#d97706' };
+}
+function baseLayout(title, xTitle, yTitle) {
+    const t = T();
+    return {
+        title:{text:title, font:{size:15,color:t.title,family:'Inter, sans-serif'}},
+        xaxis:{title:{text:xTitle,font:{color:t.text,size:12}},tickfont:{color:t.text,size:10},gridcolor:t.grid,linecolor:t.grid,zerolinecolor:t.grid},
+        yaxis:{title:{text:yTitle,font:{color:t.text,size:12}},tickfont:{color:t.text,size:10},gridcolor:t.grid,linecolor:t.grid,zerolinecolor:t.grid},
+        template:t.template, paper_bgcolor:t.bg, plot_bgcolor:t.bg,
+        margin:{t:56,b:72,l:74,r:24}, hovermode:'x unified',
+        legend:{font:{color:t.text,size:11},orientation:'h',y:-0.24,x:0.5,xanchor:'center'},
+        hoverlabel:{bgcolor:t.isDark?'#1e293b':'#ffffff',bordercolor:t.grid,font:{color:t.title,family:'Inter',size:12}}
+    };
+}
+function fanTraces(x, d, opts={}) {
+    const c = opts.color || T().cyan, rgb = opts.rgb || '8,145,178';
+    const inner = d.p25 && d.p75 && d.p25.some((v,i)=>v!==d.p50[i]);
+    const tr = [
+        {x, y:d.p5, line:{width:0}, showlegend:false, hoverinfo:'skip'},
+        {x, y:d.p95, fill:'tonexty', fillcolor:`rgba(${rgb},0.10)`, line:{width:0}, name:opts.band||'P5 – P95', hoverinfo:'skip'}
+    ];
+    if (inner) {
+        tr.push({x, y:d.p25, line:{width:0}, showlegend:false, hoverinfo:'skip'});
+        tr.push({x, y:d.p75, fill:'tonexty', fillcolor:`rgba(${rgb},0.22)`, line:{width:0}, name:'P25 – P75', hoverinfo:'skip'});
+    }
+    tr.push({x, y:d.p50, mode:'lines', line:{color:c,width:3}, name:opts.name||'Median'});
+    return tr;
+}
+
+/* ═══════════════ MASTER UPDATE ═══════════════ */
+function updateAll() {
+    if (!demoDb) return;
+    ['target','withdrawal','allocation'].forEach(k => {
+        const s = el(k+'-slider');
+        s.style.setProperty('--fill', ((s.value-s.min)/(s.max-s.min)*100)+'%');
+    });
+    el('target-val').textContent = state.target + '%';
+    el('withdrawal-val').textContent = '$' + state.withdrawal.toLocaleString();
+    el('allocation-val').textContent = state.allocation + '%';
+    styleSeg('strat-btn-constant_mix', state.strategy==='constant_mix');
+    styleSeg('strat-btn-cash_first_guardrail', state.strategy==='cash_first_guardrail');
+
+    const d = currentDecum(), m = currentMacro();
+    if (!d || !m) return;
+    updateKPIs(d); updateSummary(d); updateInsights(d); updateApiConsole(); syncHash();
+    switchTab(state.tab, true);
+}
+
+const SEG_ON = 'py-2 px-2 rounded-lg text-[11px] font-semibold transition-all bg-white dark:bg-slate-900 text-cyan-700 dark:text-cyan-300 shadow-sm border border-slate-200 dark:border-slate-600';
+const SEG_OFF = 'py-2 px-2 rounded-lg text-[11px] font-semibold transition-all text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 border border-transparent';
+function styleSeg(id, on) { el(id).className = on ? SEG_ON : SEG_OFF; }
+
+function setStrategy(s) { state.strategy = s; updateAll(); }
+function setHeatYear(y) { state.heatYear = y; renderHeatmap(); }
+function setHeatView(v) { state.heatView = v; renderHeatmap(); }
+
+function updateKPIs(d) {
+    const i = idxAt(30);
+    const s30 = d.solvency[i]*100;
+    const kS = el('kpi-success');
+    animateNum(kS, s30, fmtPct);
+    kS.className = 'text-3xl font-extrabold mono ' + (s30>=80?'text-emerald-500':s30>=50?'text-amber-500':'text-rose-500');
+    animateNum(el('kpi-median'), d.balance_p50[i], fmtMoney);
+    animateNum(el('kpi-p5'), d.balance_p5[i], fmtMoney);
+    animateNum(el('kpi-funded'), expectedFundedYears(d.solvency), v=>v.toFixed(1));
+}
+
+function updateSummary(d) {
+    const i = idxAt(30);
+    el('scenario-summary').innerHTML =
+        `<b>$${state.withdrawal.toLocaleString()}/mo</b> · <b>${state.allocation}% equity</b> · <b>${state.target}% target</b> · <b>${stratName(state.strategy)}</b><br>` +
+        `→ <b class="text-cyan-700 dark:text-cyan-400">${fmtPct(d.solvency[i]*100)}</b> solvent at year 30, ` +
+        `median balance <b>${fmtMoney(d.balance_p50[i])}</b>.`;
+}
+
+function updateInsights(d) {
+    const i = idxAt(30);
+    const other = getDecum(state.withdrawal, state.allocation, otherStrategy(), state.target);
+    const items = [];
+    if (other) {
+        const a = d.solvency[i]*100, b = other.solvency[i]*100, delta = a - b;
+        items.push(`⚖️ <b>${stratName(state.strategy)}</b> ${delta>=0?'outperforms':'trails'} ${stratName(otherStrategy())} by <b>${Math.abs(delta).toFixed(1)} pts</b> at year 30 (${b.toFixed(1)}% → ${a.toFixed(1)}%).`);
+    }
+    const p5zero = d.balance_p5.findIndex(v=>v<=0);
+    items.push(p5zero >= 0
+        ? `📉 In the worst 5% of paths, capital is exhausted by <b>year ${Math.round(timeline[p5zero])}</b>.`
+        : `📈 Even the 5th-percentile path retains capital through year ${HORIZON}.`);
+    const ruin = (1-d.solvency[d.solvency.length-1])*100;
+    items.push(`🎲 <b>${ruin.toFixed(1)}%</b> of the ${N_SCEN.toLocaleString()} paths fully deplete $1.0M within ${HORIZON} years.`);
+    items.push(`⏱️ Probability-weighted funded duration: <b>${expectedFundedYears(d.solvency).toFixed(1)} of ${HORIZON} years</b>.`);
+    el('insights-list').innerHTML = items.map(t=>`<li class="flex gap-2"><span>${t}</span></li>`).join('');
+}
+
+/* ═══════════════ RENDERERS ═══════════════ */
+function renderActiveTab() {
+    const d = currentDecum(), m = currentMacro();
+    if (state.tab==='portfolio' && d) renderPortfolio(d, m);
+    else if (state.tab==='heatmap') renderHeatmap();
+    else if (state.tab==='macro' && m) renderMacro(m);
+}
+
+function renderPortfolio(d, m) {
+    renderSolvency(d); renderBalance(d, m); renderRuin(d);
+}
+
+function renderSolvency(d) {
+    const t = T();
+    const traces = [{ x:timeline, y:d.solvency.map(v=>v*100), mode:'lines',
+        line:{color:t.cyan,width:3}, name:'Solvency — '+stratName(state.strategy),
+        hovertemplate:'Year %{x:.2f}<br>%{y:.1f}% solvent<extra></extra>' }];
+    let d2 = null;
+    if (state.compare && (d2 = getDecum(state.withdrawal, state.allocation, otherStrategy(), state.target))) {
+        traces.push({ x:timeline, y:d2.solvency.map(v=>v*100), mode:'lines',
+            line:{color:t.amber,width:2.5,dash:'dash'}, name:'Solvency — '+stratName(otherStrategy()),
+            hovertemplate:'Year %{x:.2f}<br>%{y:.1f}% solvent<extra></extra>' });
+    }
+    const i = idxAt(30), s30 = d.solvency[i]*100;
+    const annotations = [{x:30, y:s30, text:`<b>${s30.toFixed(1)}%</b>`, showarrow:true, arrowhead:0,
+        arrowcolor:t.cyan, ax:36, ay:-28, font:{color:t.cyan,size:12}, bgcolor:t.bg, bordercolor:t.cyan, borderwidth:1, borderpad:3}];
+    if (d2) { const s2 = d2.solvency[i]*100;
+        annotations.push({x:30, y:s2, text:`<b>${s2.toFixed(1)}%</b>`, showarrow:true, arrowhead:0,
+            arrowcolor:t.amber, ax:36, ay:28, font:{color:t.amber,size:12}, bgcolor:t.bg, bordercolor:t.amber, borderwidth:1, borderpad:3}); }
+    const L = baseLayout(`Solvency Probability — ${stratName(state.strategy)}${d2?' vs '+stratName(otherStrategy()):''} (${HORIZON}-Year Horizon)`,'Retirement horizon (years)','Paths still solvent (%)');
+    L.yaxis.range = [-3,105]; L.yaxis.ticksuffix = '%';
+    L.shapes = [{type:'line',x0:30,x1:30,y0:0,y1:1,yref:'paper',line:{color:t.isDark?'#334155':'#cbd5e1',width:1,dash:'dot'}}];
+    L.annotations = annotations;
+    Plotly.react('chart-solvency', traces, L, PLOT_CONFIG);
+}
+
+function renderBalance(d, m) {
+    const t = T();
+    const canReal = m.cpi && m.cpi.p50 && m.cpi.p50.length === timeline.length;
+    const real = state.real && canReal;
+    const defl = arr => real ? arr.map((v,i)=>v/Math.max(m.cpi.p50[i],1e-9)) : arr;
+    const traces = fanTraces(timeline, {p5:defl(d.balance_p5), p50:defl(d.balance_p50), p95:defl(d.balance_p95)},
+        {color:t.cyan, name:'Median — '+stratName(state.strategy)});
+    if (state.compare) {
+        const o = getDecum(state.withdrawal, state.allocation, otherStrategy(), state.target);
+        if (o) traces.push({x:timeline, y:defl(o.balance_p50), mode:'lines',
+            line:{color:t.amber,width:2.5,dash:'dash'}, name:'Median — '+stratName(otherStrategy())});
+    }
+    const L = baseLayout(
+        real ? 'Real Nest-Egg Paths (deflated by median CPI) — $1.0M Initial' : 'Nest-Egg Depletion Risk — $1.0M Initial Balance',
+        'Retirement horizon (years)', 'Portfolio value');
+    L.yaxis.tickprefix = '$'; L.yaxis.tickformat = '~s'; L.yaxis.rangemode = 'tozero';
+    Plotly.react('chart-balance', traces, L, PLOT_CONFIG);
+}
+
+function renderRuin(d) {
+    const card = el('card-ruin');
+    if (!Array.isArray(d.ruin_hist)) { card.classList.add('hidden'); return; }
+    card.classList.remove('hidden');
+    const t = T(), hist = d.ruin_hist;
+    const total = hist.reduce((a,b)=>a+b,0) + (d.survived||0) || N_SCEN;
+    const surv = d.survived ?? Math.max(0, N_SCEN - hist.reduce((a,b)=>a+b,0));
+    const xs = hist.map((_,b)=>b+1).concat([hist.length+1]);
+    const ys = hist.map(c=>c/total*100).concat([surv/total*100]);
+    const colors = hist.map(()=>'#fb7185').concat(['#10b981']);
+    const tickvals = xs.filter(x=>x%5===0).concat([hist.length+1]);
+    const ticktext = tickvals.map(x=>x===hist.length+1?'Alive':x);
+    const L = baseLayout(`When Do Paths Fail? — Depletion Year Distribution (${N_SCEN.toLocaleString()} paths)`,'Year of depletion','Share of paths (%)');
+    L.hovermode = 'closest';
+    L.xaxis.tickvals = tickvals; L.xaxis.ticktext = ticktext;
+    L.yaxis.ticksuffix = '%';
+    Plotly.react('chart-ruin', [{x:xs, y:ys, type:'bar', marker:{color:colors}, width:0.7,
+        hovertemplate:'%{y:.1f}% of paths<extra></extra>'}], L, PLOT_CONFIG);
+}
+
+function buildZ(strategy, iY) {
+    return ALLOCS.map(a => WDS.map(w => {
+        const d = getDecum(w, a, strategy, state.target);
+        return d ? +(d.solvency[iY]*100).toFixed(2) : null;
+    }));
+}
+
+function renderHeatmap() {
+    const t = T(), iY = idxAt(state.heatYear);
+    const zA = buildZ('constant_mix', iY), zB = buildZ('cash_first_guardrail', iY);
+    let z, text, colorscale, zmin, zmax, hover, cbTitle, viewLabel;
+    if (state.heatView === 'delta') {
+        z = zB.map((r,i)=>r.map((v,j)=> (v==null||zA[i][j]==null)?null:+(v-zA[i][j]).toFixed(2)));
+        let mx = 5; z.forEach(r=>r.forEach(v=>{ if(v!=null) mx=Math.max(mx,Math.abs(v)); }));
+        mx = Math.ceil(mx);
+        zmin=-mx; zmax=mx; cbTitle='Δ pts'; viewLabel='Guardrail Benefit (B − A)';
+        colorscale = [[0,'#be123c'],[0.5,'#334155'],[1,'#059669']];
+        text = z.map(r=>r.map(v=>v==null?'':(v>=0?'+':'')+v.toFixed(0)));
+        hover = 'Withdrawal %{x} · Equity %{y}<br>Guardrail Δ %{z:+.1f} pts<extra></extra>';
+    } else {
+        z = state.heatView==='a' ? zA : zB;
+        viewLabel = state.heatView==='a' ? 'Constant Mix' : 'Guardrail';
+        zmin=0; zmax=100; cbTitle='Solvency %';
+        colorscale = [[0,'#7f1d1d'],[0.35,'#b45309'],[0.65,'#65a30d'],[1,'#047857']];
+        text = z.map(r=>r.map(v=>v==null?'':Math.round(v)));
+        hover = 'Withdrawal %{x} · Equity %{y}<br>Solvency %{z:.1f}%<extra></extra>';
+    }
+    ['a','b','delta'].forEach(v=>styleSeg('hv-'+v, state.heatView===v));
+    [10,20,30,40,50].forEach(y=>styleSeg('hy-'+y, state.heatYear===y));
+
+    const L = baseLayout(`${state.heatYear}-Year Solvency Surface — ${viewLabel} · ${state.target}% Inflation Target`,
+        'Monthly withdrawal', 'Equity allocation');
+    L.hovermode = 'closest'; L.margin = {t:56,b:56,l:88,r:24};
+    Plotly.react('chart-heatmap', [{
+        type:'heatmap', x:WDS.map(w=>'$'+(w/1000)+'k'), y:ALLOCS.map(a=>a+'%'),
+        z, text, texttemplate:'%{text}', textfont:{color:'#fff',size:11,family:'Inter'},
+        colorscale, zmin, zmax, xgap:2, ygap:2, hovertemplate:hover,
+        colorbar:{title:{text:cbTitle,font:{color:t.text,size:11}}, tickfont:{color:t.text,size:10}, outlinewidth:0}
+    }], L, PLOT_CONFIG);
+
+    // auto insight
+    let best={v:-1e9}, worst={v:1e9};
+    z.forEach((r,i)=>r.forEach((v,j)=>{ if(v==null)return;
+        if(v>best.v) best={v, w:WDS[j], a:ALLOCS[i]};
+        if(v<worst.v) worst={v, w:WDS[j], a:ALLOCS[i]}; }));
+    el('heat-insight').innerHTML = state.heatView==='delta'
+        ? `💡 Guardrail benefit peaks at <b>${best.v>=0?'+':''}${best.v.toFixed(1)} pts</b> ($${best.w.toLocaleString()}/mo · ${best.a}% equity) — leverage exactly where sequence-of-returns risk bites hardest.`
+        : `💡 Most resilient node: <b>$${best.w.toLocaleString()}/mo · ${best.a}% equity → ${best.v.toFixed(1)}%</b>. Fragile tail: <b>$${worst.w.toLocaleString()}/mo · ${worst.a}% equity → ${worst.v.toFixed(1)}%</b>.`;
+}
+
+function renderMacro(m) {
+    const t = T();
+    // Yield
+    const y = m.yield, f = Math.max(...y.p50, ...y.p95) < 1.0 ? 100 : 1;
+    const yd = {}; ['p5','p25','p50','p75','p95'].forEach(k=>{ if(y[k]) yd[k]=y[k].map(v=>v*f); });
+    const Ly = baseLayout(`Nominal Short-Rate Projections — CIR (${state.target}% target regime)`,'Horizon (years)','Yield (%)');
+    Ly.yaxis.ticksuffix = '%';
+    Plotly.react('chart-yield', fanTraces(timeline, yd, {name:'Median rate'}), Ly, PLOT_CONFIG);
+    // CPI
+    const Lc = baseLayout(`Cumulative CPI — Ornstein-Uhlenbeck (${state.target}% target)`,'Horizon (years)','Index (base = 1.0)');
+    Plotly.react('chart-cpi', fanTraces(timeline, m.cpi, {name:'Median CPI'}), Lc, PLOT_CONFIG);
+    // Equity spaghetti
+    const card = el('card-equity');
+    const hasFan = m.equity && m.equity.p50, hasS = Array.isArray(m.samples_equity) && m.samples_equity.length;
+    if (!hasFan && !hasS) { card.classList.add('hidden'); return; }
+    card.classList.remove('hidden');
+    const traces = [];
+    if (hasS) m.samples_equity.forEach((row,i)=>traces.push({x:timeline, y:row, mode:'lines',
+        line:{color: t.isDark?'rgba(34,211,238,0.16)':'rgba(8,145,178,0.15)', width:1},
+        showlegend:i===0, name:'Simulated paths', hoverinfo:'skip'}));
+    if (hasFan) traces.push(...fanTraces(timeline, m.equity,
+        {color: t.isDark?'#f8fafc':'#0f172a', name:'Median path'}));
+    const Le = baseLayout(`Equity Growth — $1 Compounding Across ${N_SCEN.toLocaleString()} Jump-Diffusion Paths`,'Horizon (years)','Growth factor (×)');
+    Le.yaxis.type = state.logEquity ? 'log' : 'linear';
+    Plotly.react('chart-equity', traces, Le, PLOT_CONFIG);
+}
+
+/* ═══════════════ API CONSOLE ═══════════════ */
+function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;');}
+function hlJSON(src){return esc(src).replace(/("(\\.|[^\\"])*")(\s*:)?|\b(true|false|null)\b|-?\d+(\.\d+)?([eE][+-]?\d+)?/g,
+    m=>/^"/.test(m)?(/:$/.test(m)?`<span class="tok-k">${m}</span>`:`<span class="tok-s">${m}</span>`)
+        :/true|false|null/.test(m)?`<span class="tok-b">${m}</span>`:`<span class="tok-n">${m}</span>`);}
+
+function updateApiConsole() {
+    const isG = state.strategy === 'cash_first_guardrail';
+    const payload = { preset:'world', num_scenarios:N_SCEN, duration_years:HORIZON, seed:42, ou_mu:state.target/100,
+        initial_balance:1000000, initial_monthly_withdrawal:state.withdrawal,
+        portfolio_weights:{equity:state.allocation/100, fixed_income:roundVal((100-state.allocation)/100,2)},
+        liquidation_strategy: isG?'cash_first':'constant_mix', frictional_drag_annual:0.0025, tax_on_gains_rate:0.15 };
+    if (isG) payload.spending_guardrail = {enabled:true, floor_balance_threshold:400000, reduction_factor:0.8};
+    const pj = JSON.stringify(payload, null, 2);
+    const pyPj = pj.replace(/\btrue\b/g,'True').replace(/\bfalse\b/g,'False').replace(/\bnull\b/g,'None');
+
+    el('console-curl').innerHTML =
+`<span class="tok-c">curl</span> -X POST <span class="tok-s">"https://api.aethel.com/api/v1/decumulation"</span> \\
+  -H <span class="tok-s">"Content-Type: application/json"</span> \\
+  -H <span class="tok-s">"X-API-Key: YOUR_API_KEY"</span> \\
+  -d '${hlJSON(pj)}'`;
+
+    el('console-python').innerHTML =
+`<span class="tok-k">import</span> requests
+
+url = <span class="tok-s">"https://api.aethel.com/api/v1/decumulation"</span>
+headers = {"X-API-Key": <span class="tok-s">"YOUR_API_KEY"</span>}
+payload = ${hlJSON(pyPj)}
+
+r = requests.post(url, json=payload, headers=headers)
+data = r.json()
+<span class="tok-f">print</span>(<span class="tok-s">"Solvency @ final year:"</span>, data[<span class="tok-s">"probability_of_success"</span>][-1])`;
+
+    el('console-js').innerHTML =
+`<span class="tok-k">const</span> res = <span class="tok-k">await</span> <span class="tok-f">fetch</span>(<span class="tok-s">"https://api.aethel.com/api/v1/decumulation"</span>, {
+  method: <span class="tok-s">"POST"</span>,
+  headers: { <span class="tok-s">"Content-Type"</span>: <span class="tok-s">"application/json"</span>, <span class="tok-s">"X-API-Key"</span>: <span class="tok-s">"YOUR_API_KEY"</span> },
+  body: JSON.stringify(${hlJSON(pj)})
+});
+<span class="tok-k">const</span> data = <span class="tok-k">await</span> res.json();
+console.<span class="tok-f">log</span>(<span class="tok-s">"Solvency @ final year:"</span>, data.probability_of_success.at(-1));`;
+    setLang(state.lang);
+}
+
+function setLang(l) {
+    state.lang = l;
+    ['curl','python','js'].forEach(k => {
+        el('console-'+k).classList.toggle('hidden', k!==l);
+        styleSeg('lang-btn-'+k, k===l);
+    });
+}
+function copyActiveCode() {
+    copyText(el('console-'+state.lang).textContent);
+    toast('Code copied to clipboard');
+}
+function copyText(txt) {
+    if (navigator.clipboard && window.isSecureContext) { navigator.clipboard.writeText(txt).catch(()=>fallbackCopy(txt)); }
+    else fallbackCopy(txt);
+}
+function fallbackCopy(txt) {
+    const ta = document.createElement('textarea'); ta.value = txt; ta.style.position='fixed'; ta.style.opacity='0';
+    document.body.appendChild(ta); ta.select();
+    try { document.execCommand('copy'); } catch(e) {}
+    ta.remove();
+}
+function toast(msg) {
+    const t = el('toast'); t.textContent = msg; t.classList.add('show');
+    clearTimeout(t._h); t._h = setTimeout(()=>t.classList.remove('show'), 2000);
+}
+
+/* ═══════════════ TABS ═══════════════ */
+function switchTab(name, skipHash) {
+    state.tab = name;
+    ['portfolio','heatmap','macro','methodology','api'].forEach(k => {
+        el('tab-'+k).classList.toggle('hidden', k!==name);
+        el('tab-btn-'+k).className = k===name
+            ? 'border-b-2 border-cyan-600 pb-3 text-sm font-semibold text-cyan-700 dark:text-cyan-400 px-1 transition-all whitespace-nowrap'
+            : 'border-b-2 border-transparent pb-3 text-sm font-medium text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 px-1 transition-all whitespace-nowrap';
+    });
+    if (!skipHash) syncHash();
+    requestAnimationFrame(()=>{ renderActiveTab(); window.dispatchEvent(new Event('resize')); });
+}
+
+function initReveal() {
+    const io = new IntersectionObserver(es => es.forEach(e => {
+        if (e.isIntersecting) { e.target.classList.add('revealed'); io.unobserve(e.target); }
+    }), {threshold:0.1});
+    document.querySelectorAll('.reveal').forEach(x => io.observe(x));
+}
+
+init();
+</script>
 </body>
 </html>

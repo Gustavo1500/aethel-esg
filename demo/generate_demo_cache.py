@@ -5,167 +5,210 @@ from aethel import SimulatorConfig, MarketSimulator, SimulationResults
 
 # --- SYMMETRIC PARAMETER GRID (HORIZON FIXED AT 50 YEARS) ---
 HORIZON_YEARS = 50
-INFLATION_TARGETS = [0.02, 0.04, 0.06] # 2%, 4%, and 6% structural targets
+INFLATION_TARGETS = [0.02, 0.04, 0.06]
 WITHDRAWALS = [2000, 3000, 4000, 5000, 6000, 7000, 8000, 9000, 10000, 11000, 12000]
-ALLOCATION_MIXES = [20, 30, 40, 50, 60, 70, 80, 90, 100]  # Representing Equity %
+ALLOCATION_MIXES = [20, 30, 40, 50, 60, 70, 80, 90, 100]
 STRATEGIES = ["constant_mix", "cash_first_guardrail"]
 
-DOWNSAMPLE_FACTOR = 3  # Downsample to quarterly steps to optimize JSON size
+DOWNSAMPLE_FACTOR = 3
+N_SAMPLE_PATHS = 24          # Spaghetti-plot paths stored per inflation target
+INITIAL_BALANCE = 1_000_000.0
 PRESETS_DIR = "presets"
 OUTPUT_FILE = "demo/demo_database.json"
 
 
 def load_preset_config() -> SimulatorConfig:
-    """Loads default preset parameters from presets directory."""
     path = os.path.join(PRESETS_DIR, "world.json")
     if not os.path.exists(path):
         raise FileNotFoundError(f"Missing 'world.json' in {PRESETS_DIR}. Run build_presets.py first.")
-
     with open(path, "r") as f:
-        preset_dict = json.load(f)
-    return SimulatorConfig.from_dict(preset_dict)
+        return SimulatorConfig.from_dict(json.load(f))
 
 
 def sanitize_rates(arr) -> list[float]:
-    """Rounds interest rates/probabilities to 4 decimals for space efficiency."""
     return [round(float(x), 4) for x in arr]
 
 
 def sanitize_balances(arr) -> list[int]:
-    """Saves significant storage space by rounding balances to the nearest integer."""
     return [int(round(float(x))) for x in arr]
 
 
-def make_spending_guardrail(initial_monthly_withdrawal: float, threshold: float = 400000.0, reduction: float = 0.80):
-    """Factory function returning a vectorized scenario-level spending guardrail."""
+def make_spending_guardrail(initial_monthly_withdrawal, threshold=400000.0, reduction=0.80):
     def variable_spending_guardrail(balance, cpi_factor, step, deposit_rate):
         base_w = initial_monthly_withdrawal * cpi_factor
-        is_depleted = balance < threshold
-        return np.where(is_depleted, base_w * reduction, base_w)
+        return np.where(balance < threshold, base_w * reduction, base_w)
     return variable_spending_guardrail
 
 
+def safe_query(results, metric, stat):
+    """Query a stat; gracefully fall back to p50 if the percentile is unsupported."""
+    try:
+        return results.query(metric, stat=stat, step="all")
+    except Exception:
+        return results.query(metric, stat="p50", step="all")
+
+
+def try_query(results, metric, stat):
+    try:
+        return results.query(metric, stat=stat, step="all")
+    except Exception:
+        return None
+
+
+def extract_sample_paths(raw_scenarios, n=N_SAMPLE_PATHS, seed=7):
+    """Best-effort extraction of raw per-scenario equity-growth paths for the
+    frontend spaghetti plot. Returns [] if the internal layout is unknown."""
+    candidates = ["equity_growth", "equity", "equity_growth_factor", "equity_path"]
+    matrix = None
+    try:
+        first = raw_scenarios[0]
+        for cand in candidates:
+            vals = None
+            if isinstance(first, dict) and cand in first:
+                vals = [s[cand] for s in raw_scenarios]
+            elif hasattr(first, cand):
+                vals = [getattr(s, cand) for s in raw_scenarios]
+            if vals is not None:
+                matrix = np.asarray(vals, dtype=float)
+                break
+    except Exception:
+        matrix = None
+    if matrix is None or matrix.ndim != 2:
+        return []
+    if matrix.shape[0] != len(raw_scenarios) and matrix.shape[1] == len(raw_scenarios):
+        matrix = matrix.T
+    rng = np.random.default_rng(seed)
+    idx = np.sort(rng.choice(matrix.shape[0], size=min(n, matrix.shape[0]), replace=False))
+    sampled = matrix[idx][:, ::DOWNSAMPLE_FACTOR]
+    return [[round(float(v), 4) for v in row] for row in sampled]
+
+
+def ruin_distribution(balances) -> dict:
+    """Histogram of the year each scenario's balance first hits zero."""
+    arr = np.asarray(balances, dtype=float)
+    if arr.ndim != 2:
+        return {}
+    depleted = arr <= 0.0
+    ever = depleted.any(axis=0)
+    first_idx = depleted.argmax(axis=0)
+    years = np.minimum((first_idx // 12).astype(int), HORIZON_YEARS)
+    hist = np.bincount(years[ever], minlength=HORIZON_YEARS + 1).astype(int).tolist()
+    return {"ruin_hist": hist, "survived": int((~ever).sum())}
+
+
+def economic_block(results, raw_scenarios, downsampled_timeline) -> dict:
+    stats = ["p5", "p25", "p50", "p75", "p95", "mean"]
+    block = {
+        "timeline": sanitize_rates(downsampled_timeline),
+        "cpi": {s: sanitize_rates(safe_query(results, "cpi", s)[::DOWNSAMPLE_FACTOR]) for s in stats},
+        "yield": {s: sanitize_rates(safe_query(results, "rate", s)[::DOWNSAMPLE_FACTOR]) for s in stats},
+    }
+    # Equity-growth fan (try common metric names)
+    eq = {}
+    for s in stats:
+        arr = try_query(results, "equity_growth", s)
+        if arr is None:
+            arr = try_query(results, "equity", s)
+        if arr is not None:
+            eq[s] = sanitize_rates(arr[::DOWNSAMPLE_FACTOR])
+    if len(eq) == len(stats):
+        block["equity"] = eq
+    samples = extract_sample_paths(raw_scenarios)
+    if samples:
+        block["samples_equity"] = samples
+    return block
+
+
 def main():
-    print("==================================================")
-    print(" Aethel ESG - Compiling Multi-Target Demo Cache   ")
-    print("==================================================")
+    print("=" * 50)
+    print(" Aethel ESG - Compiling Demo Cache v2")
+    print("=" * 50)
 
     config = load_preset_config()
     config.duration_years = HORIZON_YEARS
-    config.num_scenarios = 1000  # High scenario count for high-quality statistics
+    config.num_scenarios = 1000
     config.seed = 42
     config.max_workers = 4
 
     db = {
         "metadata": {
+            "version": 2,
             "preset": "world",
             "scenarios": config.num_scenarios,
             "horizon_years": HORIZON_YEARS,
+            "initial_balance": INITIAL_BALANCE,
+            "frictional_drag_annual": 0.0025,
+            "tax_on_gains_rate": 0.15,
             "inflation_targets": INFLATION_TARGETS,
             "withdrawals": WITHDRAWALS,
             "allocations": ALLOCATION_MIXES,
             "strategies": STRATEGIES,
-            "downsample_factor": DOWNSAMPLE_FACTOR
+            "downsample_factor": DOWNSAMPLE_FACTOR,
         },
         "economic_data": {},
-        "decumulation_data": {}
+        "decumulation_data": {},
     }
 
-    # Generate economic base paths per inflation target
     for target in INFLATION_TARGETS:
         target_pct = int(round(target * 100))
-        print(f"\n -> Generating Base Economic Paths for {target_pct}% Inflation Target...")
-        
-        # Override structural inflation mean parameters in parameters config
+        print(f"\n -> Base Economic Paths @ {target_pct}% Inflation Target...")
         config.ou_mu = target
-        
+
         simulator = MarketSimulator(config)
         raw_scenarios = simulator.run()
         results = SimulationResults(raw_scenarios)
 
-        steps_count = config.steps
-        full_timeline = np.arange(steps_count + 1) / 12.0
-        downsampled_timeline = full_timeline[::DOWNSAMPLE_FACTOR].tolist()
+        full_timeline = np.arange(config.steps + 1) / 12.0
+        db["economic_data"][f"target_{target_pct}"] = economic_block(
+            results, raw_scenarios, full_timeline[::DOWNSAMPLE_FACTOR].tolist()
+        )
 
-        # Extract downsampled macro-economic quantiles
-        cpi_p5 = sanitize_rates(results.query("cpi", stat="p5", step="all")[::DOWNSAMPLE_FACTOR])
-        cpi_p50 = sanitize_rates(results.query("cpi", stat="p50", step="all")[::DOWNSAMPLE_FACTOR])
-        cpi_p95 = sanitize_rates(results.query("cpi", stat="p95", step="all")[::DOWNSAMPLE_FACTOR])
-        cpi_mean = sanitize_rates(results.query("cpi", stat="mean", step="all")[::DOWNSAMPLE_FACTOR])
-
-        yield_p5 = sanitize_rates(results.query("rate", stat="p5", step="all")[::DOWNSAMPLE_FACTOR])
-        yield_p50 = sanitize_rates(results.query("rate", stat="p50", step="all")[::DOWNSAMPLE_FACTOR])
-        yield_p95 = sanitize_rates(results.query("rate", stat="p95", step="all")[::DOWNSAMPLE_FACTOR])
-        yield_mean = sanitize_rates(results.query("rate", stat="mean", step="all")[::DOWNSAMPLE_FACTOR])
-
-        db["economic_data"][f"target_{target_pct}"] = {
-            "timeline": sanitize_rates(downsampled_timeline),
-            "cpi": {"p5": cpi_p5, "p25": cpi_p50, "p50": cpi_p50, "p75": cpi_p50, "p95": cpi_p95, "mean": cpi_mean},
-            "yield": {"p5": yield_p5, "p25": yield_p50, "p50": yield_p50, "p75": yield_p50, "p95": yield_p95, "mean": yield_mean}
-        }
-
-        # Run combinatorial decumulations for this target
         for w_amount in WITHDRAWALS:
             for eq_mix in ALLOCATION_MIXES:
-                portfolio_weights = {
-                    "equity": eq_mix / 100.0,
-                    "fixed_income": (100 - eq_mix) / 100.0
-                }
-
+                weights = {"equity": eq_mix / 100.0, "fixed_income": (100 - eq_mix) / 100.0}
                 for strategy in STRATEGIES:
                     combo_key = f"{w_amount}w_{eq_mix}a_{strategy}_{target_pct}t"
-                    print(f"    * Node: Inflation Target {target_pct}% | ${w_amount}/mo | {eq_mix}% Equity | Strategy: {strategy}")
+                    print(f"    * {target_pct}% | ${w_amount}/mo | {eq_mix}% EQ | {strategy}")
 
+                    kwargs = dict(
+                        initial_balance=INITIAL_BALANCE,
+                        initial_monthly_withdrawal=w_amount,
+                        portfolio_weights=weights,
+                        frictional_drag_annual=0.0025,
+                        tax_on_gains_rate=0.15,
+                    )
                     if strategy == "cash_first_guardrail":
-                        guardrail_rule = make_spending_guardrail(
-                            initial_monthly_withdrawal=w_amount,
-                            threshold=400000.0,
-                            reduction=0.80
-                        )
-                        decum_results = results.simulate_decumulation(
-                            initial_balance=1000000.0,
-                            initial_monthly_withdrawal=w_amount,
-                            portfolio_weights=portfolio_weights,
+                        decum = results.simulate_decumulation(
                             liquidation_strategy="cash_first",
-                            frictional_drag_annual=0.0025,
-                            tax_on_gains_rate=0.15,
-                            withdrawal_policy=guardrail_rule
+                            withdrawal_policy=make_spending_guardrail(w_amount),
+                            **kwargs,
                         )
                     else:
-                        decum_results = results.simulate_decumulation(
-                            initial_balance=1000000.0,
-                            initial_monthly_withdrawal=w_amount,
-                            portfolio_weights=portfolio_weights,
+                        decum = results.simulate_decumulation(
                             liquidation_strategy="constant_mix",
-                            frictional_drag_annual=0.0025,
-                            tax_on_gains_rate=0.15,
-                            withdrawal_policy=None
+                            withdrawal_policy=None,
+                            **kwargs,
                         )
 
-                    solvency_curve = sanitize_rates(decum_results["probability_of_success"][::DOWNSAMPLE_FACTOR])
-
-                    balances_at_steps = decum_results["balances"][::DOWNSAMPLE_FACTOR]
-                    p5_balances = sanitize_balances(np.percentile(balances_at_steps, 5.0, axis=1))
-                    p50_balances = sanitize_balances(np.percentile(balances_at_steps, 50.0, axis=1))
-                    p95_balances = sanitize_balances(np.percentile(balances_at_steps, 95.0, axis=1))
-
-                    db["decumulation_data"][combo_key] = {
-                        "solvency": solvency_curve,
-                        "balance_p5": p5_balances,
-                        "balance_p50": p50_balances,
-                        "balance_p95": p95_balances
+                    balances_ds = decum["balances"][::DOWNSAMPLE_FACTOR]
+                    node = {
+                        "solvency": sanitize_rates(decum["probability_of_success"][::DOWNSAMPLE_FACTOR]),
+                        "balance_p5": sanitize_balances(np.percentile(balances_ds, 5.0, axis=1)),
+                        "balance_p50": sanitize_balances(np.percentile(balances_ds, 50.0, axis=1)),
+                        "balance_p95": sanitize_balances(np.percentile(balances_ds, 95.0, axis=1)),
                     }
+                    node.update(ruin_distribution(decum["balances"]))
+                    db["decumulation_data"][combo_key] = node
 
         results.cleanup()
 
-    # Save to highly-compressed JSON using minified separators
     with open(OUTPUT_FILE, "w") as f:
-        json.dump(db, f, separators=(',', ':'))
+        json.dump(db, f, separators=(",", ":"))
 
-    print("\n==================================================")
-    print(f" SUCCESS! Target Database generated: {OUTPUT_FILE}")
+    print("\n" + "=" * 50)
+    print(f" SUCCESS! Database written: {OUTPUT_FILE}")
     print(f" Size: {os.path.getsize(OUTPUT_FILE) / 1024 / 1024:.2f} MB")
-    print("==================================================")
+    print("=" * 50)
 
 
 if __name__ == "__main__":
