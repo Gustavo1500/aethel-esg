@@ -138,31 +138,24 @@ print(f"Portfolio Solvency Probability at Year 30: {final_solvency * 100:.1f}%")
 
 ```text
 actuarial_esg/
-├── pyproject.toml                   # Python package metadata & dependencies
-├── requirements.txt                 # Minimum requirement specifications
-├── presets/
-│   └── usa.json                     # Pre-calibrated United States macroeconomic baseline parameters
-├── demo/
-│   ├── logo.png                     # Logo branding asset
-│   ├── demo_database.json           # Compact pre-calculated scenario database
-│   └── generate_demo_cache.py       # Pre-calculates and compiles demo_database.json
-│   └── index.html                   # The frontend of the interactive demo
-
-├── examples/                        # Specialized mathematical modeling templates
-│   ├── basic_simulation.py          # Quickstart run of economic projections
-│   ├── run_calibration.py           # Calibration & parameters export from historical CSVs
-│   ├── portfolio_decumulation_demo.py # Compares constant-mix vs cash-first with guardrails
-│   ├── fire_integration.py          # Calibrates and outputs dataframes to support FIRE models
-│   ├── run_chunked_simulation.py    # Memory-safe execution of high-horizon simulations
-│   └── visualize_scenarios.py       # Interactive Plotly dashboard assembly
+├── .github/                         # GitHub repository configurations
+│   ├── ISSUE_TEMPLATE/              # Standardized issue templates
+│   ├── PULL_REQUEST_TEMPLATE.md     # Guidelines for submitting code changes
+│   └── workflows/                   # GitHub Actions (docs deployment)
+├── demo/                            # Interactive dashboard frontend assets
+├── docs/                            # Core documentation source files (MkDocs markdown)
+├── examples/                        # Modeling scripts & quickstart templates
+├── presets/                         # Pre-calibrated regional parameters (world.json)
 ├── src/
-│   └── aethel/                      # Packaged Python library source code
+│   └── aethel/                      # Core Python library package
 │       ├── calibration/             # Parameter estimation logic (OLS, MLE solvers)
-│       ├── engine/                  # Core stochastic processes & simulation loops
-│       └── output/                  # Downstream metrics, portfolio, & decumulation engines
-└── tests/
-    └── test_engine.py               # Core regression & boundary condition mathematical assertions
-    └── test_robustness.py           # Robustness test of the project - both tests have 88% project coverage
+│       ├── engine/                  # Continuous-time stochastic processes & JIT loops
+│       └── output/                  # Analytics, portfolio projection, & decumulation engines
+├── tests/                           # Testing suites - 88% coverage overall
+├── CODE_OF_CONDUCT.md               # Standards for community behavior
+├── CONTRIBUTING.md                  # Detailed environment setup & submission guide
+├── pyproject.toml                   # Python packaging metadata & dependencies
+└── mkdocs.yml                       # Documentation structure and compiler settings
 ```
 
 ---
