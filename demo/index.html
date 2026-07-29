@@ -101,9 +101,9 @@
         </nav>
         <div class="flex items-center gap-2.5">
             <button id="theme-toggle-btn" class="p-2.5 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" aria-label="Toggle theme"></button>
-            <a href="https://tally.so/r/eqj5Eq" target="_blank" rel="noopener"
+            <a href="https://aethel-console.vercel.app" target="_blank" rel="noopener"
                class="bg-slate-900 dark:bg-cyan-600 hover:bg-cyan-700 dark:hover:bg-cyan-500 text-white font-semibold py-2.5 px-5 rounded-lg transition-colors shadow-sm text-sm whitespace-nowrap">
-                Request API Key
+                Manage API Keys
             </a>
         </div>
     </div>
@@ -125,7 +125,7 @@
             over a pre-computed stochastic database.
         </p>
         <div class="flex flex-wrap justify-center gap-3 mt-8 reveal">
-            <a href="https://tally.so/r/eqj5Eq" target="_blank" rel="noopener" class="bg-cyan-600 hover:bg-cyan-700 text-white font-semibold px-7 py-3 rounded-xl shadow-lg shadow-cyan-600/25 transition-all hover:-translate-y-0.5 text-sm">Request API Key Access</a>
+            <a href="https://aethel-console.vercel.app" target="_blank" rel="noopener" class="bg-cyan-600 hover:bg-cyan-700 text-white font-semibold px-7 py-3 rounded-xl shadow-lg shadow-cyan-600/25 transition-all hover:-translate-y-0.5 text-sm">Developer Console</a>
             <button onclick="document.getElementById('demo').scrollIntoView({behavior:'smooth'})" class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 hover:border-cyan-500 font-semibold px-7 py-3 rounded-xl transition-all hover:-translate-y-0.5 text-sm">Launch Interactive Demo ↓</button>
             <a href="https://github.com/gustavo1500/aethel-esg" target="_blank" rel="noopener" class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 hover:border-cyan-500 font-semibold px-5 py-3 rounded-xl transition-all hover:-translate-y-0.5 text-sm">★ GitHub</a>
         </div>
@@ -450,8 +450,8 @@
 }</pre>
                 </details>
 
-                <a href="https://tally.so/r/eqj5Eq" target="_blank" rel="noopener" class="mt-6 inline-flex items-center gap-2 bg-cyan-600 hover:bg-cyan-700 text-white font-semibold px-6 py-3 rounded-xl shadow-lg shadow-cyan-600/25 transition-all hover:-translate-y-0.5 text-sm">
-                    Request your API key →
+                <a href="https://aethel-console.vercel.app" target="_blank" rel="noopener" class="mt-6 inline-flex items-center gap-2 bg-cyan-600 hover:bg-cyan-700 text-white font-semibold px-6 py-3 rounded-xl shadow-lg shadow-cyan-600/25 transition-all hover:-translate-y-0.5 text-sm">
+                    Manage your API keys →
                 </a>
             </div>
         </div>
@@ -469,7 +469,7 @@
                 <p class="text-cyan-100 text-sm mt-3 leading-relaxed">This demo replays 594 pre-computed nodes. The cloud API computes <em>your</em> node — custom balances, horizons, tax regimes, regional calibrations — on demand.</p>
             </div>
             <div class="flex flex-col items-start md:items-end gap-3">
-                <a href="https://tally.so/r/eqj5Eq" target="_blank" rel="noopener" class="bg-white text-cyan-700 font-bold px-8 py-3.5 rounded-xl shadow-lg hover:-translate-y-0.5 transition-transform text-sm">Request API Key Access</a>
+                <a href="https://aethel-console.vercel.app" target="_blank" rel="noopener" class="bg-white text-cyan-700 font-bold px-8 py-3.5 rounded-xl shadow-lg hover:-translate-y-0.5 transition-transform text-sm">Provision API Keys</a>
                 <a href="https://Gustavo1500.github.io/aethel-esg/" target="_blank" rel="noopener" class="text-cyan-100 hover:text-white text-xs font-semibold underline underline-offset-4">Read the API reference →</a>
             </div>
         </div>
@@ -494,7 +494,7 @@
         <div>
             <div class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3">Enterprise</div>
             <ul class="space-y-2 text-xs text-slate-500">
-                <li><a class="hover:text-cyan-600" href="https://tally.so/r/eqj5Eq" target="_blank" rel="noopener">Request API Key</a></li>
+                <li><a class="hover:text-cyan-600" href="https://aethel-console.vercel.app" target="_blank" rel="noopener">Developer Console</a></li>
                 <li><span class="inline-flex items-center gap-1.5"><span class="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>Cloud API operational — Render + Neon</span></li>
             </ul>
         </div>
@@ -939,8 +939,9 @@ function updateApiConsole() {
     const pj = JSON.stringify(payload, null, 2);
     const pyPj = pj.replace(/\btrue\b/g,'True').replace(/\bfalse\b/g,'False').replace(/\bnull\b/g,'None');
 
+    // Updated below endpoints from api.aethel.com to aethel-api.onrender.com
     el('console-curl').innerHTML =
-`<span class="tok-c">curl</span> -X POST <span class="tok-s">"https://api.aethel.com/api/v1/decumulation"</span> \\
+`<span class="tok-c">curl</span> -X POST <span class="tok-s">"https://aethel-api.onrender.com/api/v1/decumulation"</span> \\
   -H <span class="tok-s">"Content-Type: application/json"</span> \\
   -H <span class="tok-s">"X-API-Key: YOUR_API_KEY"</span> \\
   -d '${hlJSON(pj)}'`;
@@ -948,7 +949,7 @@ function updateApiConsole() {
     el('console-python').innerHTML =
 `<span class="tok-k">import</span> requests
 
-url = <span class="tok-s">"https://api.aethel.com/api/v1/decumulation"</span>
+url = <span class="tok-s">"https://aethel-api.onrender.com/api/v1/decumulation"</span>
 headers = {"X-API-Key": <span class="tok-s">"YOUR_API_KEY"</span>}
 payload = ${hlJSON(pyPj)}
 
@@ -957,7 +958,7 @@ data = r.json()
 <span class="tok-f">print</span>(<span class="tok-s">"Solvency @ final year:"</span>, data[<span class="tok-s">"probability_of_success"</span>][-1])`;
 
     el('console-js').innerHTML =
-`<span class="tok-k">const</span> res = <span class="tok-k">await</span> <span class="tok-f">fetch</span>(<span class="tok-s">"https://api.aethel.com/api/v1/decumulation"</span>, {
+`<span class="tok-k">const</span> res = <span class="tok-k">await</span> <span class="tok-f">fetch</span>(<span class="tok-s">"https://aethel-api.onrender.com/api/v1/decumulation"</span>, {
   method: <span class="tok-s">"POST"</span>,
   headers: { <span class="tok-s">"Content-Type"</span>: <span class="tok-s">"application/json"</span>, <span class="tok-s">"X-API-Key"</span>: <span class="tok-s">"YOUR_API_KEY"</span> },
   body: JSON.stringify(${hlJSON(pj)})

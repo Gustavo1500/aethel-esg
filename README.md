@@ -3,16 +3,16 @@
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/Gustavo1500/aethel-esg/blob/master/LICENSE)
 [![Python Version](https://img.shields.io/badge/python-3.9%20%7C%203.10%20%7C%203.11-blue)](https://www.python.org/)
 [![Documentation](https://img.shields.io/badge/Docs-GitHub%20Pages-blue)](https://gustavo1500.github.io/aethel-esg)
-[![Cloud API](https://img.shields.io/badge/Cloud%20API-Active-success)](https://tally.so/r/eqj5Eq)
+[![API Console](https://img.shields.io/badge/Developer%20Console-Active-success)](https://aethel-console.vercel.app/)
 [![Hosted Demo](https://img.shields.io/badge/Interactive%20Demo-Vercel-success)](https://aethel-esg.vercel.app/)
 
-Aethel is an actuarial-grade Economic Scenario Generator (ESG) engine written in Python. This repository contains the open-source core library, which implements high-performance stochastic asset-liability and macroeconomic models.
+Aethel is an actuarial-grade Economic Scenario Generator (ESG) engine written in Python. This repository contains the open-source core library, which implements stochastic asset-liability and macroeconomic models.
 
-While the mathematical engine is open-source here for local modeling, we also provide a cloud-hosted, multi-tenant enterprise API. The SaaS infrastructure features automated usage tracking, global regional presets, and persistent state management.
+While the mathematical engine is open-source here for local modeling, we also provide a cloud-hosted API. The SaaS portal features self-service API key generation, automated usage tracking, global regional presets, and persistent state management.
 
-*   **Live Interactive Demo:** [View the Interactive ESG Dashboard](https://aethel-esg.vercel.app/) *(Hosted directly via this repo's `index.html`)*
-*   **Request API Access:** Get a cloud API key at [Tally Key Request Form](https://tally.so/r/eqj5Eq).
-*   **Official Documentation:** [View Documentation & API Reference](https://Gustavo1500.github.io/aethel-esg/)
+*   **Live Interactive Demo:** [View the Interactive ESG Dashboard](https://aethel-esg.vercel.app/)
+*   **API Console:** [Aethel Developer Portal](https://aethel-console.vercel.app/).
+*   **Official Documentation:** [View Documentation & API Reference](https://gustavo1500.github.io/aethel-esg/)
 
 ---
 
@@ -165,7 +165,7 @@ actuarial_esg/
 The Aethel library includes options for memory management and performance scaling:
 
 *   **Memory-Safe Lazy Evaluation**: Generating term structures (nominal and real yields) for multiple maturities across thousands of scenarios is memory-intensive. The engine uses a `LazyScenarioList` to keep primary arrays contiguous in memory, deriving yield curves dynamically only when accessed.
-*   **Hardware-Aware Concurrency**: The simulation detects host RAM and CPU capacity to automatically partition simulations into memory-safe blocks, avoiding concurrent page-fault issues in shared environments.
+*   **Hardware-Aware Concurrency**: The engine detects available host RAM and CPU capacity to automatically partition simulations into memory-safe blocks, avoiding concurrent page-fault issues in shared environments.
 *   **Fastmath Compilations**: If `numba` is detected, the engine runs JIT-compiled loops with parallel execution capabilities.
 
 ---
@@ -178,10 +178,10 @@ The enterprise cloud platform wraps the Aethel engine in a production API:
 *   **Database Engine**: Backed by **Neon (PostgreSQL)**, utilizing a serverless architecture to manage user state, transactional API usage metrics, and cryptographically hashed API keys (SHA-256).
 *   **Hosted Calibration**: The enterprise API handles raw historical CSV uploads, running mathematical convergence checks on cloud hardware to output customized JSON presets.
 
-### Requesting API Access
-API access keys are available for testing and commercial production. You can request a key and view subscription tiers through our application intake form:
+### Provisioning Credentials
+Self-service API keys can be managed directly in the portal. You can create an account, check API usage, and manage credentials on demand:
 
-👉 **[Tally API Key Request Form](https://tally.so/r/eqj5Eq)**
+👉 **[Aethel Developer Portal](https://aethel-console.vercel.app/)**
 
 ---
 
