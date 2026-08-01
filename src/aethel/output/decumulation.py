@@ -21,7 +21,7 @@ def simulate_decumulation(
 
     equity_returns = results._extract_base_matrix("returns")
     if is_lazy:
-        deposit_returns = results.scenarios.deposit_rates.T
+        deposit_returns = results.scenarios.deposit_rates
     else:
         deposit_returns = np.column_stack([s["deposit_rates"] for s in results.scenarios])
 

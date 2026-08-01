@@ -157,7 +157,7 @@ class SimulationResults:
 
         elif m in {"equity_returns", "returns"}:
             if is_lazy:
-                res = self.scenarios.equity_returns.T
+                res = self.scenarios.equity_returns
             else:
                 res = np.column_stack([s["stock_returns"] for s in self.scenarios])
 
@@ -168,7 +168,7 @@ class SimulationResults:
 
         elif m in {"cpi", "inflation_index"}:
             if is_lazy:
-                res = self.scenarios.cpis.T
+                res = self.scenarios.cpis
             else:
                 res = np.column_stack([s["cpis"] for s in self.scenarios])
 
@@ -181,7 +181,7 @@ class SimulationResults:
 
         elif m in {"short_rate", "rate", "cdi", "deposit_rates"}:
             if is_lazy:
-                res = (1.0 + self.scenarios.deposit_rates.T) ** 12 - 1.0
+                res = (1.0 + self.scenarios.deposit_rates) ** 12 - 1.0
             else:
                 monthly_rates = np.column_stack([s["deposit_rates"] for s in self.scenarios])
                 res = (1.0 + monthly_rates) ** 12 - 1.0

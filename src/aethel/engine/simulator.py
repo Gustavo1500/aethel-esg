@@ -105,7 +105,9 @@ class LazyScenarioList:
         self.pi_min = pi_min
         self.lambda_irp = lambda_irp
         self.kappa_irp = kappa_irp
-        self.num_scenarios = len(equity_returns)
+        # Master arrays are stored in (steps, num_scenarios) layout.
+        # Consumers index both dimensions directly; no transpose copies needed.
+        self.num_scenarios = equity_returns.shape[1]
 
     def __len__(self) -> int:
         return self.num_scenarios
@@ -125,9 +127,9 @@ class LazyScenarioList:
         real_yields = self._generate_scenario_real_yields(idx, nominal_yields)
 
         return {
-            "stock_returns": self.equity_returns[idx],
-            "cpis": self.cpis[idx],
-            "deposit_rates": self.deposit_rates[idx],
+            "stock_returns": self.equity_returns[:, idx],
+            "cpis": self.cpis[:, idx],
+            "deposit_rates": self.deposit_rates[:, idx],
             "nominal_yield_curves": nominal_yields,
             "real_yield_curves": real_yields,
             "tenors": self.tenors
@@ -185,7 +187,7 @@ class LazyScenarioList:
         return yields_real
 
     def __repr__(self) -> str:
-        return f"LazyScenarioList(scenarios={self.num_scenarios}, steps={self.equity_returns.shape[1]})"
+        return f"LazyScenarioList(scenarios={self.num_scenarios}, steps={self.equity_returns.shape[0]})"
 
 
 class MarketSimulator:
@@ -331,9 +333,9 @@ class MarketSimulator:
 
         print("[ESG] Core processing phase complete.")
         return LazyScenarioList(
-            equity_returns=np.ascontiguousarray(equity_returns.T),
-            cpis=np.ascontiguousarray(cpis.T),
-            deposit_rates=np.ascontiguousarray(deposit_rates.T),
+            equity_returns=equity_returns,
+            cpis=cpis,
+            deposit_rates=deposit_rates,
             rate_paths=rate_paths,
             mu_rate_paths=mu_rate_paths,
             inflation_paths=inflation_paths,
@@ -376,23 +378,36 @@ class MarketSimulator:
         chunk_size = end_idx - start_idx
         sqrt_dt = np.sqrt(cfg.dt)
 
-        Z_raw_flat = np.empty((3, cfg.steps * chunk_size))
+        # Z_raw_direct is stored directly in the (steps, 3, chunk) layout that
+        # both simulation loops consume. This avoids the flat (3, steps*chunk)
+        # intermediate plus reshape/transpose/ascontiguousarray copy from the
+        # original implementation while producing bit-identical correlated
+        # shocks (verified: L @ direct layout == original values exactly).
+        Z_raw_direct = np.empty((cfg.steps, 3, chunk_size))
         jump_shocks_all = np.zeros((cfg.steps, chunk_size), dtype=np.float64)
 
         for i in range(chunk_size):
             scenario_seed = seed_offset + i
             local_rng = np.random.default_rng(scenario_seed)
 
-            Z_raw_flat[:, i * cfg.steps : (i + 1) * cfg.steps] = local_rng.normal(0.0, 1.0, (3, cfg.steps))
+            Z_raw_direct[:, :, i] = local_rng.normal(0.0, 1.0, (3, cfg.steps)).T
 
             jumps = local_rng.poisson(cfg.lambda_J * cfg.dt, cfg.steps)
             active_idx = np.where(jumps > 0)[0]
-            for t_step in active_idx:
-                num_jumps = jumps[t_step]
-                jump_shocks_all[t_step, i] = np.sum(local_rng.normal(cfg.mu_J, cfg.sigma_J, num_jumps))
+            if active_idx.size > 0:
+                # Vectorized jump shock aggregation.
+                # Draws the same total number of normals in the same order as the
+                # serial loop, then uses reduceat to sum contiguous per-step blocks.
+                # This is bit-identical to the previous per-step np.sum approach.
+                total_jumps = int(jumps.sum())
+                all_normals = local_rng.normal(cfg.mu_J, cfg.sigma_J, total_jumps)
+                cum_jumps = np.cumsum(jumps)
+                starts = cum_jumps[active_idx] - jumps[active_idx]
+                jump_shocks_all[active_idx, i] = np.add.reduceat(all_normals, starts)
 
-        Z_corr = (L @ Z_raw_flat).reshape(3, chunk_size, cfg.steps).transpose(2, 0, 1)
-        Z_corr = np.ascontiguousarray(Z_corr)
+        # (3,3) @ (steps, 3, chunk) -> (steps, 3, chunk): identical values to
+        # the original L @ Z_raw_flat path with zero extra copies.
+        Z_corr = L @ Z_raw_direct
 
         y_paths = np.empty((cfg.steps + 1, chunk_size))
         smoothed_inflation_paths = np.empty((cfg.steps + 1, chunk_size))

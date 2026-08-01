@@ -22,7 +22,7 @@ def calculate_portfolio_returns(results, weights: Dict[str, float]) -> np.ndarra
         elif a in {"fixed_income", "cash", "cdi", "deposit_rates", "fixed_income_short"}:
             from aethel.engine.simulator import LazyScenarioList
             if isinstance(results.scenarios, LazyScenarioList):
-                asset_returns = results.scenarios.deposit_rates.T
+                asset_returns = results.scenarios.deposit_rates
             else:
                 asset_returns = np.column_stack([s["deposit_rates"] for s in results.scenarios])
         else:
